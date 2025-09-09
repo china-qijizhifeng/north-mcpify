@@ -1,0 +1,40 @@
+{
+  "session_info": {
+    "total_urls": 2,
+    "total_size_kb": 3052,
+    "recording_start": "2025-09-09T12:56:05.504153",
+    "recording_end": "2025-09-09T12:56:15.184320"
+  },
+  "url_mapping": {
+    "https://www.baidu.com/": {
+      "filename": "000_www_baidu_com_.html",
+      "last_updated": "2025-09-09T12:56:12.762492",
+      "content_hash": "898b1120cde2985136fe78de9b432bb5",
+      "size_kb": 1526
+    },
+    "https://www.baidu.com/s?ie=utf-8&f=8&rsv_bp=1&rsv_idx=1&tn=baidu&wd=Python%E7%BC%96%E7%A8%8B&fenlei=256&rsv_pq=0xc469818500366791&rsv_t=0a67avssO24XRTwsNpqmu5LP5wGYDq3baFRODqUN3zzyDJXLNIcLDsrTerE&rqlang=en&rsv_dl=tb&rsv_enter=0&rsv_sug3=2&rsv_sug1=1&rsv_sug7=100&rsv_btype=i&rsv_sug4=3649": {
+      "filename": "001_www_baidu_com_s.html",
+      "last_updated": "2025-09-09T12:56:14.878589",
+      "content_hash": "f36e15dffeca65b1da327042621b37fc",
+      "size_kb": 1526
+    }
+  },
+  "url_timeline": [
+    {
+      "url": "https://www.baidu.com/",
+      "timestamp": "2025-09-09T12:56:05.504153",
+      "title": "Example Domain"
+    },
+    {
+      "url": "https://www.baidu.com/s?ie=utf-8&f=8&rsv_bp=1&rsv_idx=1&tn=baidu&wd=Python%E7%BC%96%E7%A8%8B&fenlei=256&rsv_pq=0xc469818500366791&rsv_t=0a67avssO24XRTwsNpqmu5LP5wGYDq3baFRODqUN3zzyDJXLNIcLDsrTerE&rqlang=en&rsv_dl=tb&rsv_enter=0&rsv_sug3=2&rsv_sug1=1&rsv_sug7=100&rsv_btype=i&rsv_sug4=3649",
+      "timestamp": "2025-09-09T12:56:13.832276",
+      "title": "Example Domain"
+    }
+  ],
+  "usage_tips": {
+    "description": "此目录包含录制过程中访问的所有URL的最终HTML快照",
+    "file_format": "文件名格式: {序号}_{域名}_{路径}.html",
+    "timeline": "url_timeline记录了页面访问的时间顺序",
+    "debugging": "可用于调试选择器失效问题和分析页面结构变化"
+  }
+}

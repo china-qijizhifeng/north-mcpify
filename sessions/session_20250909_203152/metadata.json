@@ -1,0 +1,45 @@
+{
+  "session_id": "session_20250909_203152",
+  "timestamp": "2025-09-09T20:32:25.226205",
+  "metadata": {
+    "name": "session_0909_2031",
+    "url": "https://www.baidu.com",
+    "title": "百度一下，你就知道",
+    "browser": "chromium",
+    "viewport": {
+      "width": 1920,
+      "height": 1080
+    }
+  },
+  "statistics": {
+    "total_operations": 3,
+    "total_screenshots": 3,
+    "session_duration_seconds": 4.58,
+    "pages_visited": [
+      "https://www.baidu.com/s?ie=utf-8&f=8&rsv_bp=1&rsv_idx=1&tn=baidu&wd=nihao&fenlei=256&rsv_pq=0x9db870aa008446f5&rsv_t=c226yG3jfK%2BG86FVsOTEcjWWOy30szLTOeSCBrz2WQSYBUqtDqYWWK%2FsyZVJ&rqlang=en&rsv_dl=tb&rsv_enter=1&rsv_sug3=6&rsv_sug1=1&rsv_sug7=100&rsv_sug2=0&rsv_btype=i&inputT=1329&rsv_sug4=2764",
+      "https://www.baidu.com/"
+    ]
+  },
+  "return_reference_element": {
+    "description": "用户选择的包含目标内容的元素区域",
+    "selector": ".cos-col-9.kg-pc-paragraph-top_psUqk",
+    "screenshot": "selected_element_highlight.png",
+    "element_details": {
+      "tag_name": "div",
+      "id": null,
+      "class_name": "cos-col-9 kg-pc-paragraph-top_psUqk",
+      "text_preview": "你好是汉语常用问候语，拼音为nǐ hǎo，注音ㄋㄧˇ  ㄏㄠˇ，主要用于打招呼或请教问题前的礼貌用语，适用于非熟人交流场景。其外文对应表达涵盖英文Hello、法文Bonjour、俄文Привет等12种语言版本。作为现代汉语基础问候词汇，该词语日常使用时常与\"您好\"\"早上好\"\"下...详情你好释义类似问候语例句与英文各国语言",
+      "selection_timestamp": 1757421142522
+    },
+    "selection_context": {
+      "selected_at_step": 3,
+      "page_url": "https://www.baidu.com/s?ie=utf-8&f=8&rsv_bp=1&rsv_idx=1&tn=baidu&wd=nihao&fenlei=256&rsv_pq=0x9db870aa008446f5&rsv_t=c226yG3jfK%2BG86FVsOTEcjWWOy30szLTOeSCBrz2WQSYBUqtDqYWWK%2FsyZVJ&rqlang=en&rsv_dl=tb&rsv_enter=1&rsv_sug3=6&rsv_sug1=1&rsv_sug7=100&rsv_sug2=0&rsv_btype=i&inputT=1329&rsv_sug4=2764"
+    }
+  },
+  "ai_analysis": {
+    "analyzed": false,
+    "analysis_timestamp": null,
+    "suggested_parameters": [],
+    "function_signature": null
+  }
+}

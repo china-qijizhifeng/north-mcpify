@@ -1,0 +1,286 @@
+{
+  "session_id": "interactive_test",
+  "timestamp": "2025-09-09T10:47:07.656773",
+  "metadata": {
+    "name": "interactive_test",
+    "url": "programmatic",
+    "title": "Example Domain",
+    "browser": "chromium",
+    "viewport": {
+      "width": 1920,
+      "height": 1080
+    }
+  },
+  "authentication": {
+    "has_auth": true,
+    "auth_file": "auth_state.json",
+    "login_steps": []
+  },
+  "operations": [
+    {
+      "step_id": 1,
+      "timestamp": "2025-09-09T10:47:02.177611",
+      "action": "navigation",
+      "selector": "page",
+      "value": "https://www.baidu.com",
+      "text_content": "",
+      "screenshot": "screenshots/step_1.png",
+      "dom_context": {
+        "error": "Element not found",
+        "selector": "page"
+      },
+      "page_url": "https://www.baidu.com/",
+      "viewport": {
+        "width": 1280,
+        "height": 720
+      }
+    },
+    {
+      "step_id": 2,
+      "timestamp": "2025-09-09T10:47:03.404812",
+      "action": "click",
+      "selector": "#kw",
+      "value": "",
+      "text_content": "",
+      "screenshot": "screenshots/step_2.png",
+      "dom_context": {
+        "selector": "#kw",
+        "element": {
+          "tagName": "INPUT",
+          "id": "kw",
+          "className": "s_ipt",
+          "textContent": "",
+          "innerHTML": "",
+          "outerHTML": "<input id=\"kw\" name=\"wd\" class=\"s_ipt\" value=\"\" maxlength=\"255\" autocomplete=\"off\" placeholder=\"许凯虞书欣陷多重舆论风波\" style=\"\">",
+          "attributes": {
+            "id": "kw",
+            "name": "wd",
+            "class": "s_ipt",
+            "value": "",
+            "maxlength": "255",
+            "autocomplete": "off",
+            "placeholder": "许凯虞书欣陷多重舆论风波",
+            "style": ""
+          },
+          "boundingRect": {
+            "x": 305.5,
+            "y": 185,
+            "width": 550,
+            "height": 44,
+            "top": 185,
+            "right": 855.5,
+            "bottom": 229,
+            "left": 305.5
+          },
+          "isVisible": true,
+          "computedStyle": ""
+        },
+        "parent": {
+          "tagName": "SPAN",
+          "id": "",
+          "className": "bg s_ipt_wr new-pmd iptfocus quickdelete-wrap ipthover",
+          "children": [
+            {
+              "tagName": "SPAN",
+              "id": "",
+              "className": "soutu-btn",
+              "textContent": ""
+            },
+            {
+              "tagName": "INPUT",
+              "id": "kw",
+              "className": "s_ipt",
+              "textContent": ""
+            },
+            {
+              "tagName": "I",
+              "id": "",
+              "className": "c-icon quickdelete c-color-gray2",
+              "textContent": ""
+            },
+            {
+              "tagName": "I",
+              "id": "",
+              "className": "quickdelete-line",
+              "textContent": ""
+            },
+            {
+              "tagName": "SPAN",
+              "id": "",
+              "className": "soutu-hover-tip",
+              "textContent": "按图片搜索"
+            }
+          ]
+        },
+        "page_title": "百度一下，你就知道",
+        "page_url": "https://www.baidu.com/",
+        "timestamp": null
+      },
+      "page_url": "https://www.baidu.com/",
+      "viewport": {
+        "width": 1280,
+        "height": 720
+      }
+    },
+    {
+      "step_id": 3,
+      "timestamp": "2025-09-09T10:47:05.009812",
+      "action": "input",
+      "selector": "#kw",
+      "value": "用户测试",
+      "text_content": "",
+      "screenshot": "screenshots/step_3.png",
+      "dom_context": {
+        "selector": "#kw",
+        "element": {
+          "tagName": "INPUT",
+          "id": "kw",
+          "className": "s_ipt",
+          "textContent": "",
+          "innerHTML": "",
+          "outerHTML": "<input id=\"kw\" name=\"wd\" class=\"s_ipt\" value=\"\" maxlength=\"255\" autocomplete=\"off\" placeholder=\"\" style=\"\">",
+          "attributes": {
+            "id": "kw",
+            "name": "wd",
+            "class": "s_ipt",
+            "value": "",
+            "maxlength": "255",
+            "autocomplete": "off",
+            "placeholder": "",
+            "style": ""
+          },
+          "boundingRect": {
+            "x": 136,
+            "y": 17,
+            "width": 577,
+            "height": 38,
+            "top": 17,
+            "right": 713,
+            "bottom": 55,
+            "left": 136
+          },
+          "isVisible": true,
+          "computedStyle": ""
+        },
+        "parent": {
+          "tagName": "SPAN",
+          "id": "",
+          "className": "bg s_ipt_wr new-pmd iptfocus quickdelete-wrap new-ipt-focus",
+          "children": [
+            {
+              "tagName": "SPAN",
+              "id": "",
+              "className": "soutu-btn",
+              "textContent": ""
+            },
+            {
+              "tagName": "DIV",
+              "id": "kw_tip",
+              "className": "s_ipt_tip",
+              "textContent": "用户测试"
+            },
+            {
+              "tagName": "INPUT",
+              "id": "kw",
+              "className": "s_ipt",
+              "textContent": ""
+            },
+            {
+              "tagName": "I",
+              "id": "",
+              "className": "c-icon quickdelete c-color-gray2",
+              "textContent": ""
+            },
+            {
+              "tagName": "I",
+              "id": "",
+              "className": "quickdelete-line",
+              "textContent": ""
+            },
+            {
+              "tagName": "SPAN",
+              "id": "",
+              "className": "soutu-hover-tip",
+              "textContent": "按图片搜索"
+            }
+          ]
+        },
+        "page_title": "用户测试_百度搜索",
+        "page_url": "https://www.baidu.com/",
+        "timestamp": null
+      },
+      "page_url": "https://www.baidu.com/",
+      "viewport": {
+        "width": 1280,
+        "height": 720
+      }
+    },
+    {
+      "step_id": 4,
+      "timestamp": "2025-09-09T10:47:06.749551",
+      "action": "click",
+      "selector": "#su",
+      "value": "",
+      "text_content": "",
+      "screenshot": "screenshots/step_4.png",
+      "dom_context": {
+        "selector": "#su",
+        "element": {
+          "tagName": "INPUT",
+          "id": "su",
+          "className": "bg s_btn btn_h btnhover",
+          "textContent": "",
+          "innerHTML": "",
+          "outerHTML": "<input type=\"submit\" id=\"su\" value=\"百度一下\" class=\"bg s_btn btn_h btnhover\" style=\"\">",
+          "attributes": {
+            "type": "submit",
+            "id": "su",
+            "value": "百度一下",
+            "class": "bg s_btn btn_h btnhover",
+            "style": ""
+          },
+          "boundingRect": {
+            "x": 758,
+            "y": 15,
+            "width": 102,
+            "height": 40,
+            "top": 15,
+            "right": 860,
+            "bottom": 55,
+            "left": 758
+          },
+          "isVisible": true,
+          "computedStyle": ""
+        },
+        "parent": {
+          "tagName": "SPAN",
+          "id": "",
+          "className": "bg s_btn_wr",
+          "children": [
+            {
+              "tagName": "INPUT",
+              "id": "su",
+              "className": "bg s_btn btn_h btnhover",
+              "textContent": ""
+            }
+          ]
+        },
+        "page_title": "用户测试_百度搜索",
+        "page_url": "https://www.baidu.com/s?ie=utf-8&f=8&rsv_bp=1&rsv_idx=1&tn=baidu&wd=%E7%94%A8%E6%88%B7%E6%B5%8B%E8%AF%95&fenlei=256&rsv_pq=0x99bbd35002782e27&rsv_t=a489GzvfUME4u0Fw09XB4y26BVZ7Xb51%2Fl06eKXNuDFGDYNXuip8tzGb22Tj&rqlang=en&rsv_dl=ib&rsv_enter=1&rsv_sug3=1",
+        "timestamp": null
+      },
+      "page_url": "https://www.baidu.com/s?ie=utf-8&f=8&rsv_bp=1&rsv_idx=1&tn=baidu&wd=%E7%94%A8%E6%88%B7%E6%B5%8B%E8%AF%95&fenlei=256&rsv_pq=0x99bbd35002782e27&rsv_t=a489GzvfUME4u0Fw09XB4y26BVZ7Xb51%2Fl06eKXNuDFGDYNXuip8tzGb22Tj&rqlang=en&rsv_dl=ib&rsv_enter=1&rsv_sug3=1",
+      "viewport": {
+        "width": 1280,
+        "height": 720
+      }
+    }
+  ],
+  "return_reference_element": null,
+  "ai_analysis": {
+    "analyzed": false,
+    "analysis_timestamp": null,
+    "suggested_parameters": [],
+    "function_signature": null
+  }
+}

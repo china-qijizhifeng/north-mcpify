@@ -1,0 +1,231 @@
+# 智能自动化API生成平台
+
+将网页操作录制转化为可重用的Python函数的智能平台。
+
+## 🎯 核心功能
+
+- 🎬 **一键录制**: 通过浏览器录制网页操作流程
+- 🤖 **AI智能分析**: 自动识别可参数化的操作并生成建议
+- 🧪 **交互测试**: 命令行测试生成的自动化函数
+- ✨ **智能优化**: 通过自然语言指令优化函数
+- 📦 **代码生成**: 输出干净可移植的Python函数
+
+## 🚀 快速开始
+
+### 环境要求
+
+- Python 3.8+
+- Chrome/Chromium浏览器
+
+### 安装
+
+```bash
+# 克隆项目
+git clone <repository-url>
+cd web-automation-platform
+
+# 一键设置环境（推荐）
+python scripts/setup.py
+
+# 或手动安装
+pip install -r requirements.txt
+playwright install chromium
+cp .env.example .env
+# 然后编辑 .env 文件，配置您的 API_KEY、BASE_URL 和 MODEL_NAME
+```
+
+### 基础使用
+
+```bash
+# 启动交互式界面
+python app.py
+# 或者
+python main.py
+```
+
+🎯 **交互式界面功能：**
+- 🎬 **新建录制会话** - 支持前置登录，避免重复录制登录步骤
+- 📋 **管理现有会话** - 可视化会话列表，一键分析测试
+- 🤖 **AI智能分析** - 自动识别参数，美观显示结果
+- 🧪 **交互式测试** - 引导输入参数，实时验证结果
+- 🚀 **一键生成代码** - 输出完整的Python函数
+
+## 🎮 交互式操作流程
+
+### 1. 新建录制会话
+- 输入会话名称和目标URL
+- 选择是否需要前置登录
+- 在浏览器中执行操作
+- 自动保存录制数据
+
+### 2. AI智能分析
+- 自动识别可参数化的输入
+- 生成函数签名建议
+- 提供参数类型和描述
+
+### 3. 交互式测试
+- 引导输入测试参数
+- 在真实浏览器中验证
+- 实时查看执行结果
+
+### 4. 生成Python函数
+- 输出完整的自动化代码
+- 包含错误处理和文档
+- 支持同步/异步调用
+
+## 🏗️ 项目结构
+
+```
+web-automation-platform/
+├── main.py                 # 主入口文件
+├── requirements.txt        # 依赖列表
+├── setup.py               # 安装配置
+├── .env.example           # 环境变量模板
+├── src/                   # 源代码目录
+│   ├── recording/         # 录制引擎
+│   │   └── recorder.py
+│   ├── ai/               # AI分析模块
+│   │   └── analyzer.py
+│   ├── session/          # 会话管理
+│   │   └── manager.py
+│   ├── cli/              # 命令行界面
+│   │   └── interface.py
+│   └── utils/            # 工具模块
+│       ├── event_listener.py
+│       └── context_capturer.py
+├── sessions/             # 录制会话存储
+└── generated_functions/  # 生成的函数存储
+```
+
+## 🔧 配置
+
+### 环境变量
+
+在 `.env` 文件中配置：
+
+```env
+# AI模型配置 - OpenAI格式API
+API_KEY=your_api_key_here
+BASE_URL=https://api.openai.com/v1
+MODEL_NAME=gpt-4o
+
+# 如果使用其他兼容OpenAI格式的服务，请修改BASE_URL
+# BASE_URL=https://api.deepseek.com/v1
+# BASE_URL=https://your-custom-endpoint.com/v1
+
+# 录制配置
+DEFAULT_BROWSER=chromium
+DEFAULT_VIEWPORT_WIDTH=1920
+DEFAULT_VIEWPORT_HEIGHT=1080
+
+# 存储目录
+SESSIONS_DIR=sessions
+FUNCTIONS_OUTPUT_DIR=generated_functions
+```
+
+## 📖 使用示例
+
+### 示例1: 自动化登录流程
+
+1. **启动程序**: `python app.py`
+2. **选择**: "🎬 新建录制会话"
+3. **配置**: 
+   - 会话名称: "website_login"
+   - 目标URL: "https://example.com/login"
+   - 前置登录: 选择"是"（如果需要先登录其他页面）
+4. **录制**: 在浏览器中执行登录操作
+5. **分析**: AI自动识别用户名、密码等参数
+6. **测试**: 输入测试用户名密码验证
+7. **生成**: 输出完整的登录自动化函数
+
+### 示例2: 数据抓取流程  
+
+1. **启动程序**: `python app.py`
+2. **选择**: "🎬 新建录制会话"
+3. **配置**:
+   - 会话名称: "data_scraper"  
+   - 目标URL: "https://data-site.com"
+   - 前置登录: 根据需要选择
+4. **录制**: 执行搜索和数据提取操作
+5. **分析**: AI识别搜索关键词、过滤条件等参数
+6. **优化**: 使用交互优化调整参数类型
+7. **测试**: 验证不同搜索条件的抓取结果
+8. **生成**: 输出数据抓取自动化函数
+
+### 快速体验
+
+```bash
+# 🚀 直接启动（推荐）
+python app.py
+
+# 🧪 测试系统功能
+python scripts/test.py
+
+# 🤖 测试AI配置
+python test_ai_config.py
+
+# 🎬 运行演示脚本（传统模式）
+python scripts/demo.py
+```
+
+## 🤖 AI分析功能
+
+AI分析引擎能够：
+
+- 🔍 **智能识别**: 自动识别用户输入字段和可变参数
+- 📝 **生成建议**: 提供函数签名和参数建议
+- 🛠️ **优化选择器**: 建议更稳定的元素选择器
+- 📚 **生成文档**: 自动生成函数文档和使用示例
+- 🔧 **交互优化**: 根据自然语言指令优化代码
+
+## 🧪 测试与验证
+
+平台提供多层测试验证：
+
+1. **实时测试**: 在真实浏览器环境中测试生成的函数
+2. **参数验证**: 验证参数类型和必需性
+3. **错误处理**: 自动处理常见的执行错误
+4. **交互确认**: 用户可视化确认执行结果
+
+## 🛡️ 注意事项
+
+- 确保目标网站允许自动化操作
+- 谨慎处理敏感信息（密码、个人数据）
+- 遵守网站的robots.txt和服务条款
+- 考虑添加适当的延时避免过快请求
+
+## 🤝 贡献指南
+
+欢迎提交问题和改进建议！
+
+1. Fork 项目
+2. 创建特性分支 (`git checkout -b feature/amazing-feature`)
+3. 提交更改 (`git commit -m 'Add some amazing feature'`)
+4. 推送分支 (`git push origin feature/amazing-feature`)
+5. 开启 Pull Request
+
+## 📄 许可证
+
+本项目采用 MIT 许可证 - 查看 [LICENSE](LICENSE) 文件了解详情。
+
+## 🆘 故障排除
+
+### 常见问题
+
+**Q: 录制时浏览器无法启动**
+A: 运行设置脚本：`python scripts/setup.py` 或手动安装：`playwright install chromium`
+
+**Q: AI分析失败**
+A: 检查 `.env` 文件中的 `API_KEY`、`BASE_URL` 和 `MODEL_NAME` 是否正确配置
+
+**Q: 生成的函数无法执行**
+A: 检查选择器是否过于具体，尝试使用 `refine` 命令优化
+
+**Q: 参数识别不准确**
+A: 使用 `refine` 命令通过自然语言指令调整参数
+
+### 获取帮助
+
+- 📧 提交 Issue
+- 💬 查看文档
+- 🔧 检查日志文件

@@ -1,0 +1,40 @@
+{
+  "session_info": {
+    "total_urls": 2,
+    "total_size_kb": 2220,
+    "recording_start": "2025-09-08T14:47:28.841492",
+    "recording_end": "2025-09-08T14:47:48.075233"
+  },
+  "url_mapping": {
+    "https://www.baidu.com/": {
+      "filename": "000_www_baidu_com_.html",
+      "last_updated": "2025-09-08T14:47:37.184612",
+      "content_hash": "d80ad7101618dd9ff66ba7bf89f71dff",
+      "size_kb": 802
+    },
+    "https://www.baidu.com/s?ie=utf-8&f=8&rsv_bp=1&rsv_idx=1&tn=baidu&wd=%E4%BD%A0%E5%A5%BD&fenlei=256&rsv_pq=0xeb7f1552070132f5&rsv_t=e727tRkLWxZ1Roi1k20ER0Hajl6XD3U3xdsTTJTYUsvUF7Tl44scu9TNUUDY&rqlang=en&rsv_dl=tb&rsv_enter=0&rsv_sug3=7&rsv_sug1=1&rsv_sug7=100&rsv_btype=i&prefixsug=%25E4%25BD%25A0%25E5%25A5%25BD&rsp=7&inputT=7178&rsv_sug4=9577": {
+      "filename": "001_www_baidu_com_s.html",
+      "last_updated": "2025-09-08T14:47:47.680527",
+      "content_hash": "ca00d7618f58268857930056fdaa2942",
+      "size_kb": 1418
+    }
+  },
+  "url_timeline": [
+    {
+      "url": "https://www.baidu.com/",
+      "timestamp": "2025-09-08T14:47:28.841492",
+      "title": "百度一下，你就知道"
+    },
+    {
+      "url": "https://www.baidu.com/s?ie=utf-8&f=8&rsv_bp=1&rsv_idx=1&tn=baidu&wd=%E4%BD%A0%E5%A5%BD&fenlei=256&rsv_pq=0xeb7f1552070132f5&rsv_t=e727tRkLWxZ1Roi1k20ER0Hajl6XD3U3xdsTTJTYUsvUF7Tl44scu9TNUUDY&rqlang=en&rsv_dl=tb&rsv_enter=0&rsv_sug3=7&rsv_sug1=1&rsv_sug7=100&rsv_btype=i&prefixsug=%25E4%25BD%25A0%25E5%25A5%25BD&rsp=7&inputT=7178&rsv_sug4=9577",
+      "timestamp": "2025-09-08T14:47:38.227844",
+      "title": "百度一下，你就知道"
+    }
+  ],
+  "usage_tips": {
+    "description": "此目录包含录制过程中访问的所有URL的最终HTML快照",
+    "file_format": "文件名格式: {序号}_{域名}_{路径}.html",
+    "timeline": "url_timeline记录了页面访问的时间顺序",
+    "debugging": "可用于调试选择器失效问题和分析页面结构变化"
+  }
+}

@@ -1,0 +1,51 @@
+{
+  "session_info": {
+    "total_urls": 3,
+    "total_size_kb": 162,
+    "recording_start": "2025-09-09T13:43:50.756073",
+    "recording_end": "2025-09-09T13:44:33.927569"
+  },
+  "url_mapping": {
+    "https://arxiv.org/": {
+      "filename": "000_arxiv_org_.html",
+      "last_updated": "2025-09-09T13:43:50.756073",
+      "content_hash": "52b29cd783c1ff91fa374697adb581ac",
+      "size_kb": 43
+    },
+    "https://arxiv.org/search/advanced": {
+      "filename": "001_arxiv_org_search_advanced.html",
+      "last_updated": "2025-09-09T13:44:23.241139",
+      "content_hash": "b9248a5f8556280e9cadfa3291f8a7c8",
+      "size_kb": 35
+    },
+    "https://arxiv.org/search/advanced?advanced=1&terms-0-operator=AND&terms-0-term=Large+language&terms-0-field=title&classification-physics_archives=all&classification-include_cross_list=include&date-year=&date-filter_by=date_range&date-from_date=2025&date-to_date=2025&date-date_type=submitted_date&abstracts=show&size=50&order=-announced_date_first": {
+      "filename": "002_arxiv_org_search_advanced.html",
+      "last_updated": "2025-09-09T13:44:33.107713",
+      "content_hash": "bb4714f6f17648afadf5a03574e4d295",
+      "size_kb": 84
+    }
+  },
+  "url_timeline": [
+    {
+      "url": "https://arxiv.org/",
+      "timestamp": "2025-09-09T13:43:50.756073",
+      "title": "arXiv.org e-Print archive"
+    },
+    {
+      "url": "https://arxiv.org/search/advanced",
+      "timestamp": "2025-09-09T13:43:54.888642",
+      "title": "arXiv.org e-Print archive"
+    },
+    {
+      "url": "https://arxiv.org/search/advanced?advanced=1&terms-0-operator=AND&terms-0-term=Large+language&terms-0-field=title&classification-physics_archives=all&classification-include_cross_list=include&date-year=&date-filter_by=date_range&date-from_date=2025&date-to_date=2025&date-date_type=submitted_date&abstracts=show&size=50&order=-announced_date_first",
+      "timestamp": "2025-09-09T13:44:26.045806",
+      "title": "arXiv.org e-Print archive"
+    }
+  ],
+  "usage_tips": {
+    "description": "此目录包含录制过程中访问的所有URL的最终HTML快照",
+    "file_format": "文件名格式: {序号}_{域名}_{路径}.html",
+    "timeline": "url_timeline记录了页面访问的时间顺序",
+    "debugging": "可用于调试选择器失效问题和分析页面结构变化"
+  }
+}

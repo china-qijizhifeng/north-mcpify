@@ -1,0 +1,149 @@
+[
+  {
+    "step_id": 1,
+    "timestamp": "2025-09-08T14:49:37.157712",
+    "action": "click",
+    "selector": "#kw",
+    "value": "",
+    "text_content": "",
+    "screenshot": "screenshots/step_1.png",
+    "dom_context": {
+      "selector": "#kw",
+      "element": {
+        "tagName": "INPUT",
+        "id": "kw",
+        "className": "s_ipt",
+        "textContent": "",
+        "innerHTML": "",
+        "outerHTML": "<input id=\"kw\" name=\"wd\" class=\"s_ipt\" value=\"\" maxlength=\"255\" autocomplete=\"off\" placeholder=\"大连市委原书记毕锡桢逝世\" style=\"\">",
+        "attributes": {
+          "id": "kw",
+          "name": "wd",
+          "class": "s_ipt",
+          "value": "",
+          "maxlength": "255",
+          "autocomplete": "off",
+          "placeholder": "大连市委原书记毕锡桢逝世",
+          "style": ""
+        },
+        "boundingRect": {
+          "x": 633,
+          "y": 259.1953125,
+          "width": 550,
+          "height": 44,
+          "top": 259.1953125,
+          "right": 1183,
+          "bottom": 303.1953125,
+          "left": 633
+        },
+        "isVisible": true,
+        "computedStyle": ""
+      },
+      "parent": {
+        "tagName": "SPAN",
+        "id": "",
+        "className": "bg s_ipt_wr new-pmd iptfocus quickdelete-wrap ipthover",
+        "children": [
+          {
+            "tagName": "SPAN",
+            "id": "",
+            "className": "soutu-btn",
+            "textContent": ""
+          },
+          {
+            "tagName": "INPUT",
+            "id": "kw",
+            "className": "s_ipt",
+            "textContent": ""
+          },
+          {
+            "tagName": "I",
+            "id": "",
+            "className": "c-icon quickdelete c-color-gray2",
+            "textContent": ""
+          },
+          {
+            "tagName": "I",
+            "id": "",
+            "className": "quickdelete-line",
+            "textContent": ""
+          },
+          {
+            "tagName": "SPAN",
+            "id": "",
+            "className": "soutu-hover-tip",
+            "textContent": "按图片搜索"
+          }
+        ]
+      },
+      "page_title": "百度一下，你就知道",
+      "page_url": "https://www.baidu.com/",
+      "timestamp": null
+    },
+    "page_url": "https://www.baidu.com/",
+    "viewport": {
+      "width": 1920,
+      "height": 1080
+    }
+  },
+  {
+    "step_id": 9,
+    "timestamp": "2025-09-08T14:49:53.209109",
+    "action": "click",
+    "selector": "#su",
+    "value": "",
+    "text_content": "",
+    "screenshot": "screenshots/step_9.png",
+    "dom_context": {
+      "selector": "#su",
+      "element": {
+        "tagName": "INPUT",
+        "id": "su",
+        "className": "bg s_btn btn_h btnhover",
+        "textContent": "",
+        "innerHTML": "",
+        "outerHTML": "<input type=\"submit\" id=\"su\" value=\"百度一下\" class=\"bg s_btn btn_h btnhover\" style=\"\">",
+        "attributes": {
+          "type": "submit",
+          "id": "su",
+          "value": "百度一下",
+          "class": "bg s_btn btn_h btnhover",
+          "style": ""
+        },
+        "boundingRect": {
+          "x": 758,
+          "y": 15,
+          "width": 102,
+          "height": 40,
+          "top": 15,
+          "right": 860,
+          "bottom": 55,
+          "left": 758
+        },
+        "isVisible": true,
+        "computedStyle": ""
+      },
+      "parent": {
+        "tagName": "SPAN",
+        "id": "",
+        "className": "bg s_btn_wr",
+        "children": [
+          {
+            "tagName": "INPUT",
+            "id": "su",
+            "className": "bg s_btn btn_h btnhover",
+            "textContent": ""
+          }
+        ]
+      },
+      "page_title": "百度一下，你就知道",
+      "page_url": "https://www.baidu.com/s?ie=utf-8&f=8&rsv_bp=1&rsv_idx=1&tn=baidu&wd=%E4%BD%A0%E5%A5%BD%20&fenlei=256&rsv_pq=0x95c900d506e6f7aa&rsv_t=876b1SFHQnMJfNeYNvXec54MgkKhqeW9xqUNwmq9%2Bs%2Bg2%2BHNSDKH7jJJXk7p&rqlang=en&rsv_dl=tb&rsv_enter=0&rsv_sug3=8&rsv_sug1=3&rsv_sug7=100&rsv_btype=i&prefixsug=%25E4%25BD%25A0%25E5%25A5%25BD%2520&rsp=7&inputT=14644&rsv_sug4=16609",
+      "timestamp": null
+    },
+    "page_url": "https://www.baidu.com/s?ie=utf-8&f=8&rsv_bp=1&rsv_idx=1&tn=baidu&wd=%E4%BD%A0%E5%A5%BD%20&fenlei=256&rsv_pq=0x95c900d506e6f7aa&rsv_t=876b1SFHQnMJfNeYNvXec54MgkKhqeW9xqUNwmq9%2Bs%2Bg2%2BHNSDKH7jJJXk7p&rqlang=en&rsv_dl=tb&rsv_enter=0&rsv_sug3=8&rsv_sug1=3&rsv_sug7=100&rsv_btype=i&prefixsug=%25E4%25BD%25A0%25E5%25A5%25BD%2520&rsp=7&inputT=14644&rsv_sug4=16609",
+    "viewport": {
+      "width": 1920,
+      "height": 1080
+    }
+  }
+]

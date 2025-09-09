@@ -1,0 +1,27 @@
+{
+  "session_id": "session_20250908_220707",
+  "timestamp": "2025-09-08T22:07:18.875626",
+  "metadata": {
+    "name": "quick_test",
+    "url": "programmatic",
+    "title": "Example Domain",
+    "browser": "chromium",
+    "viewport": {
+      "width": 1920,
+      "height": 1080
+    }
+  },
+  "authentication": {
+    "has_auth": true,
+    "auth_file": "auth_state.json",
+    "login_steps": []
+  },
+  "operations": [],
+  "return_reference_element": null,
+  "ai_analysis": {
+    "analyzed": false,
+    "analysis_timestamp": null,
+    "suggested_parameters": [],
+    "function_signature": null
+  }
+}

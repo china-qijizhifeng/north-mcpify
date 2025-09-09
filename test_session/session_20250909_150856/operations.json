@@ -1,0 +1,485 @@
+[
+  {
+    "step_id": 1,
+    "timestamp": "2025-09-09T21:28:31.826568",
+    "action": "navigation",
+    "selector": "page",
+    "value": "https://arxiv.org/",
+    "text_content": "",
+    "screenshot": "screenshots/step_1.png",
+    "dom_context": {
+      "error": "Element not found",
+      "selector": "page"
+    },
+    "page_url": "https://arxiv.org/",
+    "viewport": {
+      "width": 1280,
+      "height": 720
+    }
+  },
+  {
+    "step_id": 2,
+    "timestamp": "2025-09-09T21:28:33.701683",
+    "action": "click",
+    "selector": "a[href*=\"advanced\"]",
+    "value": "",
+    "text_content": "",
+    "screenshot": "screenshots/step_2.png",
+    "dom_context": {
+      "selector": "a[href*=\"advanced\"]",
+      "element": {
+        "tagName": "A",
+        "id": "",
+        "className": "",
+        "textContent": "Advanced Search",
+        "innerHTML": "Advanced Search",
+        "outerHTML": "<a href=\"https://arxiv.org/search/advanced\" style=\"\">Advanced Search</a>",
+        "attributes": {
+          "href": "https://arxiv.org/search/advanced",
+          "style": ""
+        },
+        "boundingRect": {
+          "x": 933.9140625,
+          "y": 90.609375,
+          "width": 97.7578125,
+          "height": 15,
+          "top": 90.609375,
+          "right": 1031.671875,
+          "bottom": 105.609375,
+          "left": 933.9140625
+        },
+        "isVisible": true,
+        "computedStyle": ""
+      },
+      "parent": {
+        "tagName": "P",
+        "id": "",
+        "className": "help",
+        "children": [
+          {
+            "tagName": "A",
+            "id": "",
+            "className": "",
+            "textContent": "Help"
+          },
+          {
+            "tagName": "A",
+            "id": "",
+            "className": "",
+            "textContent": "Advanced Search"
+          }
+        ]
+      },
+      "page_title": "Advanced Search | arXiv e-print repository",
+      "page_url": "https://arxiv.org/search/advanced",
+      "timestamp": null
+    },
+    "page_url": "https://arxiv.org/search/advanced",
+    "viewport": {
+      "width": 1280,
+      "height": 720
+    }
+  },
+  {
+    "step_id": 3,
+    "timestamp": "2025-09-09T21:28:37.428800",
+    "action": "click",
+    "selector": "#terms-0-term",
+    "value": "",
+    "text_content": "",
+    "screenshot": "screenshots/step_3.png",
+    "dom_context": {
+      "selector": "#terms-0-term",
+      "element": {
+        "tagName": "INPUT",
+        "id": "terms-0-term",
+        "className": "input",
+        "textContent": "",
+        "innerHTML": "",
+        "outerHTML": "<input class=\"input\" id=\"terms-0-term\" name=\"terms-0-term\" placeholder=\"Search term...\" type=\"text\" value=\"\" style=\"\">",
+        "attributes": {
+          "class": "input",
+          "id": "terms-0-term",
+          "name": "terms-0-term",
+          "placeholder": "Search term...",
+          "type": "text",
+          "value": "",
+          "style": ""
+        },
+        "boundingRect": {
+          "x": 102,
+          "y": 311.6953125,
+          "width": 309.25,
+          "height": 31.5,
+          "top": 311.6953125,
+          "right": 411.25,
+          "bottom": 343.1953125,
+          "left": 102
+        },
+        "isVisible": true,
+        "computedStyle": ""
+      },
+      "parent": {
+        "tagName": "DIV",
+        "id": "",
+        "className": "control is-expanded",
+        "children": [
+          {
+            "tagName": "LABEL",
+            "id": "",
+            "className": "hidden-label",
+            "textContent": "Search term"
+          },
+          {
+            "tagName": "INPUT",
+            "id": "terms-0-term",
+            "className": "input",
+            "textContent": ""
+          }
+        ]
+      },
+      "page_title": "Advanced Search | arXiv e-print repository",
+      "page_url": "https://arxiv.org/search/advanced",
+      "timestamp": null
+    },
+    "page_url": "https://arxiv.org/search/advanced",
+    "viewport": {
+      "width": 1280,
+      "height": 720
+    }
+  },
+  {
+    "step_id": 4,
+    "timestamp": "2025-09-09T21:28:39.044044",
+    "action": "input",
+    "selector": "#terms-0-term",
+    "value": "Large",
+    "text_content": "",
+    "screenshot": "screenshots/step_4.png",
+    "dom_context": {
+      "selector": "#terms-0-term",
+      "element": {
+        "tagName": "INPUT",
+        "id": "terms-0-term",
+        "className": "input",
+        "textContent": "",
+        "innerHTML": "",
+        "outerHTML": "<input class=\"input\" id=\"terms-0-term\" name=\"terms-0-term\" placeholder=\"Search term...\" type=\"text\" value=\"\" style=\"\">",
+        "attributes": {
+          "class": "input",
+          "id": "terms-0-term",
+          "name": "terms-0-term",
+          "placeholder": "Search term...",
+          "type": "text",
+          "value": "",
+          "style": ""
+        },
+        "boundingRect": {
+          "x": 102,
+          "y": 311.6953125,
+          "width": 309.25,
+          "height": 31.5,
+          "top": 311.6953125,
+          "right": 411.25,
+          "bottom": 343.1953125,
+          "left": 102
+        },
+        "isVisible": true,
+        "computedStyle": ""
+      },
+      "parent": {
+        "tagName": "DIV",
+        "id": "",
+        "className": "control is-expanded",
+        "children": [
+          {
+            "tagName": "LABEL",
+            "id": "",
+            "className": "hidden-label",
+            "textContent": "Search term"
+          },
+          {
+            "tagName": "INPUT",
+            "id": "terms-0-term",
+            "className": "input",
+            "textContent": ""
+          }
+        ]
+      },
+      "page_title": "Advanced Search | arXiv e-print repository",
+      "page_url": "https://arxiv.org/search/advanced",
+      "timestamp": null
+    },
+    "page_url": "https://arxiv.org/search/advanced",
+    "viewport": {
+      "width": 1280,
+      "height": 720
+    }
+  },
+  {
+    "step_id": 5,
+    "timestamp": "2025-09-09T21:28:40.692593",
+    "action": "click",
+    "selector": "#date-from_date",
+    "value": "",
+    "text_content": "",
+    "screenshot": "screenshots/step_5.png",
+    "dom_context": {
+      "selector": "#date-from_date",
+      "element": {
+        "tagName": "INPUT",
+        "id": "date-from_date",
+        "className": "input is-small",
+        "textContent": "",
+        "innerHTML": "",
+        "outerHTML": "<input class=\"input is-small\" id=\"date-from_date\" name=\"date-from_date\" placeholder=\"YYYY[-MM[-DD]]\" type=\"text\" value=\"\" style=\"\">",
+        "attributes": {
+          "class": "input is-small",
+          "id": "date-from_date",
+          "name": "date-from_date",
+          "placeholder": "YYYY[-MM[-DD]]",
+          "type": "text",
+          "value": "",
+          "style": ""
+        },
+        "boundingRect": {
+          "x": 103,
+          "y": 346.6875,
+          "width": 112,
+          "height": 26.7734375,
+          "top": 346.6875,
+          "right": 215,
+          "bottom": 373.4609375,
+          "left": 103
+        },
+        "isVisible": true,
+        "computedStyle": ""
+      },
+      "parent": {
+        "tagName": "DIV",
+        "id": "",
+        "className": "control is-datefield",
+        "children": [
+          {
+            "tagName": "INPUT",
+            "id": "date-from_date",
+            "className": "input is-small",
+            "textContent": ""
+          }
+        ]
+      },
+      "page_title": "Advanced Search | arXiv e-print repository",
+      "page_url": "https://arxiv.org/search/advanced",
+      "timestamp": null
+    },
+    "page_url": "https://arxiv.org/search/advanced",
+    "viewport": {
+      "width": 1280,
+      "height": 720
+    }
+  },
+  {
+    "step_id": 6,
+    "timestamp": "2025-09-09T21:28:42.309729",
+    "action": "input",
+    "selector": "#date-from_date",
+    "value": "2025",
+    "text_content": "",
+    "screenshot": "screenshots/step_6.png",
+    "dom_context": {
+      "selector": "#date-from_date",
+      "element": {
+        "tagName": "INPUT",
+        "id": "date-from_date",
+        "className": "input is-small",
+        "textContent": "",
+        "innerHTML": "",
+        "outerHTML": "<input class=\"input is-small\" id=\"date-from_date\" name=\"date-from_date\" placeholder=\"YYYY[-MM[-DD]]\" type=\"text\" value=\"\" style=\"\">",
+        "attributes": {
+          "class": "input is-small",
+          "id": "date-from_date",
+          "name": "date-from_date",
+          "placeholder": "YYYY[-MM[-DD]]",
+          "type": "text",
+          "value": "",
+          "style": ""
+        },
+        "boundingRect": {
+          "x": 103,
+          "y": 346.6875,
+          "width": 112,
+          "height": 26.7734375,
+          "top": 346.6875,
+          "right": 215,
+          "bottom": 373.4609375,
+          "left": 103
+        },
+        "isVisible": true,
+        "computedStyle": ""
+      },
+      "parent": {
+        "tagName": "DIV",
+        "id": "",
+        "className": "control is-datefield",
+        "children": [
+          {
+            "tagName": "INPUT",
+            "id": "date-from_date",
+            "className": "input is-small",
+            "textContent": ""
+          }
+        ]
+      },
+      "page_title": "Advanced Search | arXiv e-print repository",
+      "page_url": "https://arxiv.org/search/advanced",
+      "timestamp": null
+    },
+    "page_url": "https://arxiv.org/search/advanced",
+    "viewport": {
+      "width": 1280,
+      "height": 720
+    }
+  },
+  {
+    "step_id": 7,
+    "timestamp": "2025-09-09T21:28:43.957855",
+    "action": "click",
+    "selector": "#date-to_date",
+    "value": "",
+    "text_content": "",
+    "screenshot": "screenshots/step_7.png",
+    "dom_context": {
+      "selector": "#date-to_date",
+      "element": {
+        "tagName": "INPUT",
+        "id": "date-to_date",
+        "className": "input is-small",
+        "textContent": "",
+        "innerHTML": "",
+        "outerHTML": "<input class=\"input is-small\" id=\"date-to_date\" name=\"date-to_date\" placeholder=\"YYYY[-MM[-DD]]\" type=\"text\" value=\"\" style=\"\">",
+        "attributes": {
+          "class": "input is-small",
+          "id": "date-to_date",
+          "name": "date-to_date",
+          "placeholder": "YYYY[-MM[-DD]]",
+          "type": "text",
+          "value": "",
+          "style": ""
+        },
+        "boundingRect": {
+          "x": 225.5,
+          "y": 346.6875,
+          "width": 112,
+          "height": 26.7734375,
+          "top": 346.6875,
+          "right": 337.5,
+          "bottom": 373.4609375,
+          "left": 225.5
+        },
+        "isVisible": true,
+        "computedStyle": ""
+      },
+      "parent": {
+        "tagName": "DIV",
+        "id": "",
+        "className": "control is-datefield",
+        "children": [
+          {
+            "tagName": "INPUT",
+            "id": "date-to_date",
+            "className": "input is-small",
+            "textContent": ""
+          }
+        ]
+      },
+      "page_title": "Advanced Search | arXiv e-print repository",
+      "page_url": "https://arxiv.org/search/advanced",
+      "timestamp": null
+    },
+    "page_url": "https://arxiv.org/search/advanced",
+    "viewport": {
+      "width": 1280,
+      "height": 720
+    }
+  },
+  {
+    "step_id": 8,
+    "timestamp": "2025-09-09T21:28:45.574364",
+    "action": "input",
+    "selector": "#date-to_date",
+    "value": "2025",
+    "text_content": "",
+    "screenshot": "screenshots/step_8.png",
+    "dom_context": {
+      "selector": "#date-to_date",
+      "element": {
+        "tagName": "INPUT",
+        "id": "date-to_date",
+        "className": "input is-small",
+        "textContent": "",
+        "innerHTML": "",
+        "outerHTML": "<input class=\"input is-small\" id=\"date-to_date\" name=\"date-to_date\" placeholder=\"YYYY[-MM[-DD]]\" type=\"text\" value=\"\" style=\"\">",
+        "attributes": {
+          "class": "input is-small",
+          "id": "date-to_date",
+          "name": "date-to_date",
+          "placeholder": "YYYY[-MM[-DD]]",
+          "type": "text",
+          "value": "",
+          "style": ""
+        },
+        "boundingRect": {
+          "x": 225.5,
+          "y": 346.6875,
+          "width": 112,
+          "height": 26.7734375,
+          "top": 346.6875,
+          "right": 337.5,
+          "bottom": 373.4609375,
+          "left": 225.5
+        },
+        "isVisible": true,
+        "computedStyle": ""
+      },
+      "parent": {
+        "tagName": "DIV",
+        "id": "",
+        "className": "control is-datefield",
+        "children": [
+          {
+            "tagName": "INPUT",
+            "id": "date-to_date",
+            "className": "input is-small",
+            "textContent": ""
+          }
+        ]
+      },
+      "page_title": "Advanced Search | arXiv e-print repository",
+      "page_url": "https://arxiv.org/search/advanced",
+      "timestamp": null
+    },
+    "page_url": "https://arxiv.org/search/advanced",
+    "viewport": {
+      "width": 1280,
+      "height": 720
+    }
+  },
+  {
+    "step_id": 9,
+    "timestamp": "2025-09-09T21:28:47.877027",
+    "action": "click",
+    "selector": ".button.is-link.is-medium",
+    "value": "",
+    "text_content": "",
+    "screenshot": "screenshots/step_9.png",
+    "dom_context": {
+      "error": "Element not found",
+      "selector": ".button.is-link.is-medium"
+    },
+    "page_url": "https://arxiv.org/search/advanced?advanced=1&terms-0-operator=AND&terms-0-term=Large&terms-0-field=title&classification-physics_archives=all&classification-include_cross_list=include&date-year=&date-filter_by=date_range&date-from_date=2025&date-to_date=2025&date-date_type=submitted_date&abstracts=show&size=50&order=-announced_date_first",
+    "viewport": {
+      "width": 1280,
+      "height": 720
+    }
+  }
+]

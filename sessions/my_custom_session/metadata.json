@@ -1,0 +1,220 @@
+{
+  "session_id": "my_custom_session",
+  "timestamp": "2025-09-09T10:36:50.652713",
+  "metadata": {
+    "name": "my_test_session_v2",
+    "url": "programmatic",
+    "title": "Example Domain",
+    "browser": "chromium",
+    "viewport": {
+      "width": 1920,
+      "height": 1080
+    }
+  },
+  "authentication": {
+    "has_auth": true,
+    "auth_file": "auth_state.json",
+    "login_steps": []
+  },
+  "operations": [
+    {
+      "step_id": 1,
+      "timestamp": "2025-09-09T10:36:47.174189",
+      "action": "navigation",
+      "selector": "page",
+      "value": "https://www.baidu.com",
+      "text_content": "",
+      "screenshot": "screenshots/step_1.png",
+      "dom_context": {
+        "error": "Element not found",
+        "selector": "page"
+      },
+      "page_url": "https://www.baidu.com/",
+      "viewport": {
+        "width": 1280,
+        "height": 720
+      }
+    },
+    {
+      "step_id": 2,
+      "timestamp": "2025-09-09T10:36:48.341774",
+      "action": "click",
+      "selector": "#kw",
+      "value": "",
+      "text_content": "",
+      "screenshot": "screenshots/step_2.png",
+      "dom_context": {
+        "selector": "#kw",
+        "element": {
+          "tagName": "INPUT",
+          "id": "kw",
+          "className": "s_ipt",
+          "textContent": "",
+          "innerHTML": "",
+          "outerHTML": "<input id=\"kw\" name=\"wd\" class=\"s_ipt\" value=\"\" maxlength=\"255\" autocomplete=\"off\" placeholder=\"曝辛芷蕾团队成员月薪3万起\" style=\"\">",
+          "attributes": {
+            "id": "kw",
+            "name": "wd",
+            "class": "s_ipt",
+            "value": "",
+            "maxlength": "255",
+            "autocomplete": "off",
+            "placeholder": "曝辛芷蕾团队成员月薪3万起",
+            "style": ""
+          },
+          "boundingRect": {
+            "x": 313,
+            "y": 185,
+            "width": 550,
+            "height": 44,
+            "top": 185,
+            "right": 863,
+            "bottom": 229,
+            "left": 313
+          },
+          "isVisible": true,
+          "computedStyle": ""
+        },
+        "parent": {
+          "tagName": "SPAN",
+          "id": "",
+          "className": "bg s_ipt_wr new-pmd iptfocus quickdelete-wrap ipthover",
+          "children": [
+            {
+              "tagName": "SPAN",
+              "id": "",
+              "className": "soutu-btn",
+              "textContent": ""
+            },
+            {
+              "tagName": "INPUT",
+              "id": "kw",
+              "className": "s_ipt",
+              "textContent": ""
+            },
+            {
+              "tagName": "I",
+              "id": "",
+              "className": "c-icon quickdelete c-color-gray2",
+              "textContent": ""
+            },
+            {
+              "tagName": "I",
+              "id": "",
+              "className": "quickdelete-line",
+              "textContent": ""
+            },
+            {
+              "tagName": "SPAN",
+              "id": "",
+              "className": "soutu-hover-tip",
+              "textContent": "按图片搜索"
+            }
+          ]
+        },
+        "page_title": "百度一下，你就知道",
+        "page_url": "https://www.baidu.com/",
+        "timestamp": null
+      },
+      "page_url": "https://www.baidu.com/",
+      "viewport": {
+        "width": 1280,
+        "height": 720
+      }
+    },
+    {
+      "step_id": 3,
+      "timestamp": "2025-09-09T10:36:49.956706",
+      "action": "input",
+      "selector": "#kw",
+      "value": "覆盖测试2",
+      "text_content": "",
+      "screenshot": "screenshots/step_3.png",
+      "dom_context": {
+        "selector": "#kw",
+        "element": {
+          "tagName": "INPUT",
+          "id": "kw",
+          "className": "s_ipt",
+          "textContent": "",
+          "innerHTML": "",
+          "outerHTML": "<input id=\"kw\" name=\"wd\" class=\"s_ipt\" value=\"\" maxlength=\"255\" autocomplete=\"off\" placeholder=\"\" style=\"\">",
+          "attributes": {
+            "id": "kw",
+            "name": "wd",
+            "class": "s_ipt",
+            "value": "",
+            "maxlength": "255",
+            "autocomplete": "off",
+            "placeholder": "",
+            "style": ""
+          },
+          "boundingRect": {
+            "x": 136,
+            "y": 17,
+            "width": 577,
+            "height": 38,
+            "top": 17,
+            "right": 713,
+            "bottom": 55,
+            "left": 136
+          },
+          "isVisible": true,
+          "computedStyle": ""
+        },
+        "parent": {
+          "tagName": "SPAN",
+          "id": "",
+          "className": "bg s_ipt_wr new-pmd iptfocus quickdelete-wrap new-ipt-focus",
+          "children": [
+            {
+              "tagName": "SPAN",
+              "id": "",
+              "className": "soutu-btn",
+              "textContent": ""
+            },
+            {
+              "tagName": "INPUT",
+              "id": "kw",
+              "className": "s_ipt",
+              "textContent": ""
+            },
+            {
+              "tagName": "I",
+              "id": "",
+              "className": "c-icon quickdelete c-color-gray2",
+              "textContent": ""
+            },
+            {
+              "tagName": "I",
+              "id": "",
+              "className": "quickdelete-line",
+              "textContent": ""
+            },
+            {
+              "tagName": "SPAN",
+              "id": "",
+              "className": "soutu-hover-tip",
+              "textContent": "按图片搜索"
+            }
+          ]
+        },
+        "page_title": "百度一下，你就知道",
+        "page_url": "https://www.baidu.com/",
+        "timestamp": null
+      },
+      "page_url": "https://www.baidu.com/",
+      "viewport": {
+        "width": 1280,
+        "height": 720
+      }
+    }
+  ],
+  "return_reference_element": null,
+  "ai_analysis": {
+    "analyzed": false,
+    "analysis_timestamp": null,
+    "suggested_parameters": [],
+    "function_signature": null
+  }
+}

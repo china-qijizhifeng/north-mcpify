@@ -1,0 +1,29 @@
+{
+  "session_info": {
+    "total_urls": 1,
+    "total_size_kb": 625,
+    "recording_start": "2025-09-09T21:12:27.142074",
+    "recording_end": "2025-09-09T21:12:37.085655"
+  },
+  "url_mapping": {
+    "https://www.baidu.com/": {
+      "filename": "000_www_baidu_com_.html",
+      "last_updated": "2025-09-09T21:12:35.419630",
+      "content_hash": "65809b1a056947c034f8007867cfbdc8",
+      "size_kb": 625
+    }
+  },
+  "url_timeline": [
+    {
+      "url": "https://www.baidu.com/",
+      "timestamp": "2025-09-09T21:12:27.142074",
+      "title": "百度一下，你就知道"
+    }
+  ],
+  "usage_tips": {
+    "description": "此目录包含录制过程中访问的所有URL的最终HTML快照",
+    "file_format": "文件名格式: {序号}_{域名}_{路径}.html",
+    "timeline": "url_timeline记录了页面访问的时间顺序",
+    "debugging": "可用于调试选择器失效问题和分析页面结构变化"
+  }
+}

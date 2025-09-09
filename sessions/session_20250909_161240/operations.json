@@ -1,0 +1,78 @@
+[
+  {
+    "step_id": 1,
+    "timestamp": "2025-09-09T16:12:48.579889",
+    "action": "click",
+    "selector": "#header",
+    "value": "",
+    "text_content": "Login\n          \n    \n      \n        \n          \n          Help | Advanced Search\n        \n        \n          \n            \n              All fields\n              Title\n              Author\n              Abstract\n              Comments\n              Journal reference\n              ACM classification\n              MSC classification\n              Report number\n              arXiv identifier\n              DOI\n              ORCID\n              arXiv author ID\n              Help pages\n              Full text\n            \n          \n        \n        \n        Search",
+    "screenshot": "screenshots/step_1.png",
+    "dom_context": {
+      "selector": "#header",
+      "robust_selector": "#header",
+      "element": {
+        "tagName": "DIV",
+        "id": "header",
+        "className": "is-hidden-mobile",
+        "textContent": "Login\n          \n    \n      \n        \n          \n          Help | Advanced Search\n        \n        \n          \n            \n              All fields\n              Title\n              Author\n              Abstract\n              Comments\n              Journal reference\n              ACM classification\n              MSC classification\n              Report number\n              arXiv identifier\n              DOI\n              ORCID\n              arXiv author ID\n              Help pages\n              Full text\n            \n          \n        \n        \n        Search",
+        "innerHTML": "\n<a aria-hidden=\"true\" tabindex=\"-1\" href=\"/IgnoreMe\"></a>\n<h1><img src=\"/static/browse/0.3.4/images/arxiv-logo-one-color-white.svg\" alt=\"arxiv logo\" style=\"height:60px;\"></h1><div class=\"login\">\n  <a href=\"https://arxiv.org/login\">Login</a>\n</div>          <div class=\"search-block level-right\">\n    <form class=\"level-item mini-search\" method=\"GET\" action=\"https://arxiv.org/search\">\n      <div class=\"field has-addons\">\n        <div class=\"control\">\n          <input class=\"input is-small\" type=\"text\" name=\"query\" placeholder=\"Search...\" aria-label=\"Search term or terms\">\n          <p class=\"help\"><a href=\"https://info.arxiv.org/help\">Help</a> | <a href=\"https://arxiv.org/search/advanced\">Advanced Search</a></p>\n        </div>\n        <div class=\"control\">\n          <div class=\"select is-small\">\n            <select name=\"searchtype\" aria-label=\"Field to search\">\n              <option value=\"all\" selected=\"selected\">All fields</option>\n              <option value=\"title\">Title</option>\n              <option value=\"author\">Author</option>\n              <option value=\"abstract\">Abstract</option>\n              <option value=\"comments\">Comments</option>\n              <option value=\"journal_ref\">Journal reference</option>\n              <option value=\"acm_class\">ACM classification</option>\n              <option value=\"msc_class\">MSC classification</option>\n              <option value=\"report_num\">Report number</option>\n              <option value=\"paper_id\">arXiv identifier</option>\n              <option value=\"doi\">DOI</option>\n              <option value=\"orcid\">ORCID</option>\n              <option value=\"author_id\">arXiv author ID</option>\n              <option value=\"help\">Help pages</option>\n              <option value=\"full_text\">Full text</option>\n            </select>\n          </div>\n        </div>\n        <input type=\"hidden\" name=\"source\" value=\"header\">\n        <button class=\"button is-small is-cul-darker\">Search</button>\n      </div>\n    </form>\n  </div>\n     ",
+        "outerHTML": "<div id=\"header\" class=\"is-hidden-mobile\">\n<a aria-hidden=\"true\" tabindex=\"-1\" href=\"/IgnoreMe\"></a>\n<h1><img src=\"/static/browse/0.3.4/images/arxiv-logo-one-color-white.svg\" alt=\"arxiv logo\" style=\"height:60px;\"></h1><div class=\"login\">\n  <a href=\"https://arxiv.org/login\">Login</a>\n</div>          <div class=\"search-block level-right\">\n    <form class=\"level-item mini-search\" method=\"GET\" action=\"https://arxiv.org/search\">\n      <div class=\"field has-addons\">\n        <div class=\"control\">\n          <input class=\"input is-small\" type=\"text\" name=\"query\" placeholder=\"Search...\" aria-label=\"Search term or terms\">\n          <p class=\"help\"><a href=\"https://info.arxiv.org/help\">Help</a> | <a href=\"https://arxiv.org/search/advanced\">Advanced Search</a></p>\n        </div>\n        <div class=\"control\">\n          <div class=\"select is-small\">\n            <select name=\"searchtype\" aria-label=\"Field to search\">\n              <option value=\"all\" selected=\"selected\">All fields</option>\n              <option value=\"title\">Title</option>\n              <option value=\"author\">Author</option>\n              <option value=\"abstract\">Abstract</option>\n              <option value=\"comments\">Comments</option>\n              <option value=\"journal_ref\">Journal reference</option>\n              <option value=\"acm_class\">ACM classification</option>\n              <option value=\"msc_class\">MSC classification</option>\n              <option value=\"report_num\">Report number</option>\n              <option value=\"paper_id\">arXiv identifier</option>\n              <option value=\"doi\">DOI</option>\n              <option value=\"orcid\">ORCID</option>\n              <option value=\"author_id\">arXiv author ID</option>\n              <option value=\"help\">Help pages</option>\n              <option value=\"full_text\">Full text</option>\n            </select>\n          </div>\n        </div>\n        <input type=\"hidden\" name=\"source\" value=\"header\">\n        <button class=\"button is-small is-cul-darker\">Search</button>\n      </div>\n    </form>\n  </div>\n     </div>",
+        "attributes": {
+          "id": "header",
+          "class": "is-hidden-mobile"
+        },
+        "boundingRect": {
+          "x": 0,
+          "y": 73,
+          "width": 1905,
+          "height": 108.5,
+          "top": 73,
+          "right": 1905,
+          "bottom": 181.5,
+          "left": 0
+        },
+        "isVisible": true,
+        "computedStyle": ""
+      },
+      "parent": {
+        "tagName": "HEADER",
+        "id": "",
+        "className": "",
+        "children": [
+          {
+            "tagName": "A",
+            "id": "",
+            "className": "is-sr-only",
+            "textContent": "Skip to main content"
+          },
+          {
+            "tagName": "DIV",
+            "id": "cu-identity",
+            "className": "columns is-vcentered is-hidden-mobile",
+            "textContent": "We gratefully acknowledge support from the Simons Foundation, member institution"
+          },
+          {
+            "tagName": "DIV",
+            "id": "header",
+            "className": "is-hidden-mobile",
+            "textContent": "Login\n          \n    \n      \n        \n          \n          Help | Advanced Searc"
+          },
+          {
+            "tagName": "DIV",
+            "id": "",
+            "className": "mobile-header",
+            "textContent": "open search\n            \n              \n                \n                  \n    "
+          }
+        ]
+      },
+      "page_title": "arXiv.org e-Print archive",
+      "page_url": "https://arxiv.org/",
+      "timestamp": 1757405568528
+    },
+    "page_url": "https://arxiv.org/",
+    "viewport": {
+      "width": 1920,
+      "height": 1080
+    }
+  }
+]

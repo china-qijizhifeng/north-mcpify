@@ -1,0 +1,27 @@
+{
+  "session_id": "session_20250909_195658",
+  "timestamp": "2025-09-09T19:57:36.705169",
+  "metadata": {
+    "name": "session_0909_1956",
+    "url": "https://www.baidu.com",
+    "title": "百度一下，你就知道",
+    "browser": "chromium",
+    "viewport": {
+      "width": 1920,
+      "height": 1080
+    }
+  },
+  "statistics": {
+    "total_operations": 0,
+    "total_screenshots": 0,
+    "session_duration_seconds": 0,
+    "pages_visited": []
+  },
+  "return_reference_element": null,
+  "ai_analysis": {
+    "analyzed": false,
+    "analysis_timestamp": null,
+    "suggested_parameters": [],
+    "function_signature": null
+  }
+}

@@ -1,0 +1,62 @@
+{
+  "session_info": {
+    "total_urls": 4,
+    "total_size_kb": 610,
+    "recording_start": "2025-09-09T13:24:42.315118",
+    "recording_end": "2025-09-09T13:25:35.473467"
+  },
+  "url_mapping": {
+    "https://arxiv.org/": {
+      "filename": "000_arxiv_org_.html",
+      "last_updated": "2025-09-09T13:24:42.315118",
+      "content_hash": "52b29cd783c1ff91fa374697adb581ac",
+      "size_kb": 43
+    },
+    "https://arxiv.org/search/advanced": {
+      "filename": "001_arxiv_org_search_advanced.html",
+      "last_updated": "2025-09-09T13:25:09.534288",
+      "content_hash": "eb92e95cac2d6c60d1a1fe3e523bdc13",
+      "size_kb": 36
+    },
+    "chrome-error://chromewebdata/": {
+      "filename": "002_chromewebdata_.html",
+      "last_updated": "2025-09-09T13:25:11.554215",
+      "content_hash": "c8c4854ac1fae1cd801efd1a1aa83929",
+      "size_kb": 237
+    },
+    "https://arxiv.org/search/advanced?advanced=1&terms-0-operator=AND&terms-0-term=Large&terms-0-field=title&classification-physics_archives=all&classification-include_cross_list=include&date-year=&date-filter_by=date_range&date-from_date=2025&date-to_date=2025&date-date_type=submitted_date&abstracts=show&size=50&order=-announced_date_first": {
+      "filename": "003_arxiv_org_search_advanced.html",
+      "last_updated": "2025-09-09T13:25:32.606997",
+      "content_hash": "fad97c3edd1a84d8ef924d22da381a9a",
+      "size_kb": 294
+    }
+  },
+  "url_timeline": [
+    {
+      "url": "https://arxiv.org/",
+      "timestamp": "2025-09-09T13:24:42.315118",
+      "title": "arXiv.org e-Print archive"
+    },
+    {
+      "url": "https://arxiv.org/search/advanced",
+      "timestamp": "2025-09-09T13:24:43.320538",
+      "title": "arXiv.org e-Print archive"
+    },
+    {
+      "url": "chrome-error://chromewebdata/",
+      "timestamp": "2025-09-09T13:25:11.554215",
+      "title": "arXiv.org e-Print archive"
+    },
+    {
+      "url": "https://arxiv.org/search/advanced?advanced=1&terms-0-operator=AND&terms-0-term=Large&terms-0-field=title&classification-physics_archives=all&classification-include_cross_list=include&date-year=&date-filter_by=date_range&date-from_date=2025&date-to_date=2025&date-date_type=submitted_date&abstracts=show&size=50&order=-announced_date_first",
+      "timestamp": "2025-09-09T13:25:15.300264",
+      "title": "arXiv.org e-Print archive"
+    }
+  ],
+  "usage_tips": {
+    "description": "此目录包含录制过程中访问的所有URL的最终HTML快照",
+    "file_format": "文件名格式: {序号}_{域名}_{路径}.html",
+    "timeline": "url_timeline记录了页面访问的时间顺序",
+    "debugging": "可用于调试选择器失效问题和分析页面结构变化"
+  }
+}

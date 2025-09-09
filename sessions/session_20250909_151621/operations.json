@@ -1,0 +1,270 @@
+[
+  {
+    "step_id": 1,
+    "timestamp": "2025-09-09T15:16:26.391206",
+    "action": "click",
+    "selector": "a:nth-child(2)",
+    "value": "",
+    "text_content": "Advanced Search",
+    "screenshot": "screenshots/step_1.png",
+    "dom_context": {
+      "selector": "a:nth-child(2)",
+      "robust_selector": "div.search-block:nth-of-type(2) > form.level-item:nth-of-type(1) > div.field:nth-of-type(1) > div.control:nth-of-type(1) > p.help:nth-of-type(1) > a:nth-of-type(2)",
+      "element": {
+        "tagName": "A",
+        "id": "",
+        "className": "",
+        "textContent": "Advanced Search",
+        "innerHTML": "Advanced Search",
+        "outerHTML": "<a href=\"https://arxiv.org/search/advanced\">Advanced Search</a>",
+        "attributes": {
+          "href": "https://arxiv.org/search/advanced"
+        },
+        "boundingRect": {
+          "x": 1617.8984375,
+          "y": 135.71875,
+          "width": 98.578125,
+          "height": 14,
+          "top": 135.71875,
+          "right": 1716.4765625,
+          "bottom": 149.71875,
+          "left": 1617.8984375
+        },
+        "isVisible": true,
+        "computedStyle": ""
+      },
+      "parent": {
+        "tagName": "P",
+        "id": "",
+        "className": "help",
+        "children": [
+          {
+            "tagName": "A",
+            "id": "",
+            "className": "",
+            "textContent": "Help"
+          },
+          {
+            "tagName": "A",
+            "id": "",
+            "className": "",
+            "textContent": "Advanced Search"
+          }
+        ]
+      },
+      "page_title": "arXiv.org e-Print archive",
+      "page_url": "https://arxiv.org/",
+      "timestamp": 1757402186375
+    },
+    "page_url": "https://arxiv.org/search/advanced",
+    "viewport": {
+      "width": 1920,
+      "height": 1080
+    }
+  },
+  {
+    "step_id": 2,
+    "timestamp": "2025-09-09T15:16:28.702741",
+    "action": "click",
+    "selector": "#terms-0-term",
+    "value": "",
+    "text_content": "",
+    "screenshot": "screenshots/step_2.png",
+    "dom_context": {
+      "selector": "#terms-0-term",
+      "robust_selector": "#terms-0-term",
+      "element": {
+        "tagName": "INPUT",
+        "id": "terms-0-term",
+        "className": "input",
+        "textContent": "",
+        "innerHTML": "",
+        "outerHTML": "<input class=\"input\" id=\"terms-0-term\" name=\"terms-0-term\" placeholder=\"Search term...\" type=\"text\" value=\"\">",
+        "attributes": {
+          "class": "input",
+          "id": "terms-0-term",
+          "name": "terms-0-term",
+          "placeholder": "Search term...",
+          "type": "text",
+          "value": ""
+        },
+        "boundingRect": {
+          "x": 326,
+          "y": 311.6953125,
+          "width": 405.25,
+          "height": 31.5,
+          "top": 311.6953125,
+          "right": 731.25,
+          "bottom": 343.1953125,
+          "left": 326
+        },
+        "isVisible": true,
+        "computedStyle": ""
+      },
+      "parent": {
+        "tagName": "DIV",
+        "id": "",
+        "className": "control is-expanded",
+        "children": [
+          {
+            "tagName": "LABEL",
+            "id": "",
+            "className": "hidden-label",
+            "textContent": "Search term"
+          },
+          {
+            "tagName": "INPUT",
+            "id": "terms-0-term",
+            "className": "input",
+            "textContent": ""
+          }
+        ]
+      },
+      "page_title": "Advanced Search | arXiv e-print repository",
+      "page_url": "https://arxiv.org/search/advanced",
+      "timestamp": 1757402188694
+    },
+    "page_url": "https://arxiv.org/search/advanced",
+    "viewport": {
+      "width": 1920,
+      "height": 1080
+    }
+  },
+  {
+    "step_id": 11,
+    "timestamp": "2025-09-09T15:16:34.368580",
+    "action": "input",
+    "selector": "#terms-0-term",
+    "value": "large",
+    "text_content": "",
+    "screenshot": "screenshots/step_11.png",
+    "dom_context": {
+      "selector": "#terms-0-term",
+      "element": {
+        "tagName": "INPUT",
+        "id": "terms-0-term",
+        "className": "input",
+        "textContent": "",
+        "innerHTML": "",
+        "outerHTML": "<input class=\"input\" id=\"terms-0-term\" name=\"terms-0-term\" placeholder=\"Search term...\" type=\"text\" value=\"\" style=\"\">",
+        "attributes": {
+          "class": "input",
+          "id": "terms-0-term",
+          "name": "terms-0-term",
+          "placeholder": "Search term...",
+          "type": "text",
+          "value": "",
+          "style": ""
+        },
+        "boundingRect": {
+          "x": 326,
+          "y": 311.6953125,
+          "width": 405.25,
+          "height": 31.5,
+          "top": 311.6953125,
+          "right": 731.25,
+          "bottom": 343.1953125,
+          "left": 326
+        },
+        "isVisible": true,
+        "computedStyle": ""
+      },
+      "parent": {
+        "tagName": "DIV",
+        "id": "",
+        "className": "control is-expanded",
+        "children": [
+          {
+            "tagName": "LABEL",
+            "id": "",
+            "className": "hidden-label",
+            "textContent": "Search term"
+          },
+          {
+            "tagName": "INPUT",
+            "id": "terms-0-term",
+            "className": "input",
+            "textContent": ""
+          }
+        ]
+      },
+      "page_title": "Advanced Search | arXiv e-print repository",
+      "page_url": "https://arxiv.org/search/advanced",
+      "timestamp": null
+    },
+    "page_url": "https://arxiv.org/search/advanced",
+    "viewport": {
+      "width": 1920,
+      "height": 1080
+    }
+  },
+  {
+    "step_id": 12,
+    "timestamp": "2025-09-09T15:16:36.696570",
+    "action": "click",
+    "selector": ".button.is-link.is-medium",
+    "value": "",
+    "text_content": "Search",
+    "screenshot": "screenshots/step_12.png",
+    "dom_context": {
+      "selector": ".button.is-link.is-medium",
+      "robust_selector": "div.columns:nth-of-type(2) > div.column:nth-of-type(1) > div.box:nth-of-type(1) > form:nth-of-type(1) > section:nth-of-type(3) > button.button:nth-of-type(1)",
+      "element": {
+        "tagName": "BUTTON",
+        "id": "",
+        "className": "button is-link is-medium",
+        "textContent": "Search",
+        "innerHTML": "Search",
+        "outerHTML": "<button class=\"button is-link is-medium\">Search</button>",
+        "attributes": {
+          "class": "button is-link is-medium"
+        },
+        "boundingRect": {
+          "x": 312,
+          "y": 649.296875,
+          "width": 83.6640625,
+          "height": 39.375,
+          "top": 649.296875,
+          "right": 395.6640625,
+          "bottom": 688.671875,
+          "left": 312
+        },
+        "isVisible": true,
+        "computedStyle": ""
+      },
+      "parent": {
+        "tagName": "SECTION",
+        "id": "",
+        "className": "",
+        "children": [
+          {
+            "tagName": "DIV",
+            "id": "",
+            "className": "field",
+            "textContent": "Show abstracts\n              \n              \n              \n                 Hid"
+          },
+          {
+            "tagName": "DIV",
+            "id": "",
+            "className": "level",
+            "textContent": "2550100200\n                    \n                  \n                  \n          "
+          },
+          {
+            "tagName": "BUTTON",
+            "id": "",
+            "className": "button is-link is-medium",
+            "textContent": "Search"
+          }
+        ]
+      },
+      "page_title": "Advanced Search | arXiv e-print repository",
+      "page_url": "https://arxiv.org/search/advanced",
+      "timestamp": 1757402196685
+    },
+    "page_url": "https://arxiv.org/search/advanced?advanced=1&terms-0-operator=AND&terms-0-term=large&terms-0-field=title&classification-physics_archives=all&classification-include_cross_list=include&date-filter_by=all_dates&date-year=&date-from_date=&date-to_date=&date-date_type=submitted_date&abstracts=show&size=50&order=-announced_date_first",
+    "viewport": {
+      "width": 1920,
+      "height": 1080
+    }
+  }
+]

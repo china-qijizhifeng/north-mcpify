@@ -1,0 +1,242 @@
+[
+  {
+    "step_id": 1,
+    "timestamp": "2025-09-08T23:08:12.057341",
+    "action": "click",
+    "selector": "#kw",
+    "value": "",
+    "text_content": "",
+    "screenshot": "screenshots/step_1.png",
+    "dom_context": {
+      "selector": "#kw",
+      "element": {
+        "tagName": "INPUT",
+        "id": "kw",
+        "className": "s_ipt",
+        "textContent": "",
+        "innerHTML": "",
+        "outerHTML": "<input id=\"kw\" name=\"wd\" class=\"s_ipt\" value=\"\" maxlength=\"255\" autocomplete=\"off\" placeholder=\"金正恩访华的专车车牌有深意\" style=\"\">",
+        "attributes": {
+          "id": "kw",
+          "name": "wd",
+          "class": "s_ipt",
+          "value": "",
+          "maxlength": "255",
+          "autocomplete": "off",
+          "placeholder": "金正恩访华的专车车牌有深意",
+          "style": ""
+        },
+        "boundingRect": {
+          "x": 633,
+          "y": 259.1953125,
+          "width": 550,
+          "height": 44,
+          "top": 259.1953125,
+          "right": 1183,
+          "bottom": 303.1953125,
+          "left": 633
+        },
+        "isVisible": true,
+        "computedStyle": ""
+      },
+      "parent": {
+        "tagName": "SPAN",
+        "id": "",
+        "className": "bg s_ipt_wr new-pmd iptfocus quickdelete-wrap ipthover",
+        "children": [
+          {
+            "tagName": "SPAN",
+            "id": "",
+            "className": "soutu-btn",
+            "textContent": ""
+          },
+          {
+            "tagName": "INPUT",
+            "id": "kw",
+            "className": "s_ipt",
+            "textContent": ""
+          },
+          {
+            "tagName": "I",
+            "id": "",
+            "className": "c-icon quickdelete c-color-gray2",
+            "textContent": ""
+          },
+          {
+            "tagName": "I",
+            "id": "",
+            "className": "quickdelete-line",
+            "textContent": ""
+          },
+          {
+            "tagName": "SPAN",
+            "id": "",
+            "className": "soutu-hover-tip",
+            "textContent": "按图片搜索"
+          }
+        ]
+      },
+      "page_title": "百度一下，你就知道",
+      "page_url": "https://www.baidu.com/",
+      "timestamp": null
+    },
+    "page_url": "https://www.baidu.com/",
+    "viewport": {
+      "width": 1920,
+      "height": 1080
+    }
+  },
+  {
+    "step_id": 6,
+    "timestamp": "2025-09-08T23:08:16.694624",
+    "action": "input",
+    "selector": "#kw",
+    "value": "nihao",
+    "text_content": "",
+    "screenshot": "screenshots/step_6.png",
+    "dom_context": {
+      "selector": "#kw",
+      "element": {
+        "tagName": "INPUT",
+        "id": "kw",
+        "className": "s_ipt",
+        "textContent": "",
+        "innerHTML": "",
+        "outerHTML": "<input id=\"kw\" name=\"wd\" class=\"s_ipt\" value=\"\" maxlength=\"255\" autocomplete=\"off\" placeholder=\"\" style=\"\">",
+        "attributes": {
+          "id": "kw",
+          "name": "wd",
+          "class": "s_ipt",
+          "value": "",
+          "maxlength": "255",
+          "autocomplete": "off",
+          "placeholder": "",
+          "style": ""
+        },
+        "boundingRect": {
+          "x": 136,
+          "y": 17,
+          "width": 577,
+          "height": 38,
+          "top": 17,
+          "right": 713,
+          "bottom": 55,
+          "left": 136
+        },
+        "isVisible": true,
+        "computedStyle": ""
+      },
+      "parent": {
+        "tagName": "SPAN",
+        "id": "",
+        "className": "bg s_ipt_wr new-pmd quickdelete-wrap",
+        "children": [
+          {
+            "tagName": "SPAN",
+            "id": "",
+            "className": "soutu-btn",
+            "textContent": ""
+          },
+          {
+            "tagName": "DIV",
+            "id": "kw_tip",
+            "className": "s_ipt_tip",
+            "textContent": ""
+          },
+          {
+            "tagName": "INPUT",
+            "id": "kw",
+            "className": "s_ipt",
+            "textContent": ""
+          },
+          {
+            "tagName": "I",
+            "id": "",
+            "className": "c-icon quickdelete c-color-gray2",
+            "textContent": ""
+          },
+          {
+            "tagName": "I",
+            "id": "",
+            "className": "quickdelete-line",
+            "textContent": ""
+          },
+          {
+            "tagName": "SPAN",
+            "id": "",
+            "className": "soutu-hover-tip",
+            "textContent": "按图片搜索"
+          }
+        ]
+      },
+      "page_title": "你好_百度搜索",
+      "page_url": "https://www.baidu.com/s?ie=utf-8&f=8&rsv_bp=1&rsv_idx=1&tn=baidu&wd=nihao&fenlei=256&rsv_pq=0xfe67bb5400b70fcb&rsv_t=5adfnJYODjq76CLv3j6nL8HZqE6RnSpFuVEV5JuuE3mjOQu2RdPU9yGXiCxM&rqlang=en&rsv_dl=tb&rsv_enter=0&rsv_sug3=6&rsv_sug1=2&rsv_sug7=100&rsv_btype=i&inputT=2760&rsv_sug4=5056",
+      "timestamp": null
+    },
+    "page_url": "https://www.baidu.com/s?ie=utf-8&f=8&rsv_bp=1&rsv_idx=1&tn=baidu&wd=nihao&fenlei=256&rsv_pq=0xfe67bb5400b70fcb&rsv_t=5adfnJYODjq76CLv3j6nL8HZqE6RnSpFuVEV5JuuE3mjOQu2RdPU9yGXiCxM&rqlang=en&rsv_dl=tb&rsv_enter=0&rsv_sug3=6&rsv_sug1=2&rsv_sug7=100&rsv_btype=i&inputT=2760&rsv_sug4=5056",
+    "viewport": {
+      "width": 1920,
+      "height": 1080
+    }
+  },
+  {
+    "step_id": 7,
+    "timestamp": "2025-09-08T23:08:17.900013",
+    "action": "click",
+    "selector": "#su",
+    "value": "",
+    "text_content": "",
+    "screenshot": "screenshots/step_7.png",
+    "dom_context": {
+      "selector": "#su",
+      "element": {
+        "tagName": "INPUT",
+        "id": "su",
+        "className": "bg s_btn btn_h btnhover",
+        "textContent": "",
+        "innerHTML": "",
+        "outerHTML": "<input type=\"submit\" id=\"su\" value=\"百度一下\" class=\"bg s_btn btn_h btnhover\" style=\"\">",
+        "attributes": {
+          "type": "submit",
+          "id": "su",
+          "value": "百度一下",
+          "class": "bg s_btn btn_h btnhover",
+          "style": ""
+        },
+        "boundingRect": {
+          "x": 758,
+          "y": 15,
+          "width": 102,
+          "height": 40,
+          "top": 15,
+          "right": 860,
+          "bottom": 55,
+          "left": 758
+        },
+        "isVisible": true,
+        "computedStyle": ""
+      },
+      "parent": {
+        "tagName": "SPAN",
+        "id": "",
+        "className": "bg s_btn_wr",
+        "children": [
+          {
+            "tagName": "INPUT",
+            "id": "su",
+            "className": "bg s_btn btn_h btnhover",
+            "textContent": ""
+          }
+        ]
+      },
+      "page_title": "你好_百度搜索",
+      "page_url": "https://www.baidu.com/s?ie=utf-8&f=8&rsv_bp=1&rsv_idx=1&tn=baidu&wd=nihao&fenlei=256&rsv_pq=0xfe67bb5400b70fcb&rsv_t=5adfnJYODjq76CLv3j6nL8HZqE6RnSpFuVEV5JuuE3mjOQu2RdPU9yGXiCxM&rqlang=en&rsv_dl=tb&rsv_enter=0&rsv_sug3=6&rsv_sug1=2&rsv_sug7=100&rsv_btype=i&inputT=2760&rsv_sug4=5056",
+      "timestamp": null
+    },
+    "page_url": "https://www.baidu.com/s?ie=utf-8&f=8&rsv_bp=1&rsv_idx=1&tn=baidu&wd=nihao&fenlei=256&rsv_pq=0xfe67bb5400b70fcb&rsv_t=5adfnJYODjq76CLv3j6nL8HZqE6RnSpFuVEV5JuuE3mjOQu2RdPU9yGXiCxM&rqlang=en&rsv_dl=tb&rsv_enter=0&rsv_sug3=6&rsv_sug1=2&rsv_sug7=100&rsv_btype=i&inputT=2760&rsv_sug4=5056",
+    "viewport": {
+      "width": 1920,
+      "height": 1080
+    }
+  }
+]

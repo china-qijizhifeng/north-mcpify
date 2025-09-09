@@ -1,0 +1,44 @@
+{
+  "session_id": "session_20250909_151722",
+  "timestamp": "2025-09-09T15:17:41.914207",
+  "metadata": {
+    "name": "session_0909_1517",
+    "url": "https://www.baidu.com",
+    "title": "百度一下，你就知道",
+    "browser": "chromium",
+    "viewport": {
+      "width": 1920,
+      "height": 1080
+    }
+  },
+  "statistics": {
+    "total_operations": 2,
+    "total_screenshots": 2,
+    "session_duration_seconds": 3.94,
+    "pages_visited": [
+      "http://www.baidu.com/s?ie=utf-8&f=8&rsv_bp=1&rsv_idx=1&tn=baidu&wd=%E4%BD%A0%E5%A5%BD&fenlei=256&rsv_pq=0x83e61b5200258b2d&rsv_t=77daZh4rH7XifHmU%2FOcU7Nh%2BKID%2B%2FAeM4V2fwVpSAcSh7kV8N%2FyxHb25iPdr&rqlang=en&rsv_dl=tb&rsv_enter=1&rsv_sug3=7&rsv_sug1=5&rsv_sug7=100&rsv_btype=i&prefixsug=%25E4%25BD%25A0%25E5%25A5%25BD&rsp=6&inputT=1393&rsv_sug4=1735"
+    ]
+  },
+  "return_reference_element": {
+    "description": "用户选择的包含目标内容的元素区域",
+    "selector": "#container",
+    "screenshot": "selected_element_highlight.png",
+    "element_details": {
+      "tag_name": "div",
+      "id": "container",
+      "class_name": "sam_newgrid container_l element-hover-highlight",
+      "text_preview": "你的专属AI助手\n            \n        \n    \n                \n                    \n        \n            用AI助手回答：你好\n        \n        \n            \n        \n    \n                \n                \n               ",
+      "selection_timestamp": 1757402259073
+    },
+    "selection_context": {
+      "selected_at_step": 2,
+      "page_url": "http://www.baidu.com/s?ie=utf-8&f=8&rsv_bp=1&rsv_idx=1&tn=baidu&wd=%E4%BD%A0%E5%A5%BD&fenlei=256&rsv_pq=0x83e61b5200258b2d&rsv_t=77daZh4rH7XifHmU%2FOcU7Nh%2BKID%2B%2FAeM4V2fwVpSAcSh7kV8N%2FyxHb25iPdr&rqlang=en&rsv_dl=tb&rsv_enter=1&rsv_sug3=7&rsv_sug1=5&rsv_sug7=100&rsv_btype=i&prefixsug=%25E4%25BD%25A0%25E5%25A5%25BD&rsp=6&inputT=1393&rsv_sug4=1735"
+    }
+  },
+  "ai_analysis": {
+    "analyzed": false,
+    "analysis_timestamp": null,
+    "suggested_parameters": [],
+    "function_signature": null
+  }
+}

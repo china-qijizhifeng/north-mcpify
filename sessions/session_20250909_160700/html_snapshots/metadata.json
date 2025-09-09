@@ -1,0 +1,40 @@
+{
+  "session_info": {
+    "total_urls": 2,
+    "total_size_kb": 37,
+    "recording_start": "2025-09-09T16:07:06.827015",
+    "recording_end": "2025-09-09T16:07:15.320326"
+  },
+  "url_mapping": {
+    "https://arxiv.org/": {
+      "filename": "000_arxiv_org_.html",
+      "last_updated": "2025-09-09T16:07:06.827015",
+      "content_hash": "697ac74c810647d1a10cc256e9de043f",
+      "size_kb": 2
+    },
+    "https://arxiv.org/search/advanced": {
+      "filename": "001_arxiv_org_search_advanced.html",
+      "last_updated": "2025-09-09T16:07:10.856260",
+      "content_hash": "94509a64a26b37a6c97b77e321daf0b7",
+      "size_kb": 35
+    }
+  },
+  "url_timeline": [
+    {
+      "url": "https://arxiv.org/",
+      "timestamp": "2025-09-09T16:07:06.827015",
+      "title": "arXiv.org e-Print archive"
+    },
+    {
+      "url": "https://arxiv.org/search/advanced",
+      "timestamp": "2025-09-09T16:07:07.833224",
+      "title": "arXiv.org e-Print archive"
+    }
+  ],
+  "usage_tips": {
+    "description": "此目录包含录制过程中访问的所有URL的最终HTML快照",
+    "file_format": "文件名格式: {序号}_{域名}_{路径}.html",
+    "timeline": "url_timeline记录了页面访问的时间顺序",
+    "debugging": "可用于调试选择器失效问题和分析页面结构变化"
+  }
+}
