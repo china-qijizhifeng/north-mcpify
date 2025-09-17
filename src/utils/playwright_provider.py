@@ -41,7 +41,7 @@ class PlaywrightProvider:
             session_path: 完整的会话路径，如果指定则直接使用这个路径（优先级高于其他路径参数）
             auth_state_file: 认证状态文件路径，用于复用之前的登录状态
             headless: 是否以无头模式运行
-            viewport: 视口大小，如 {"width": 1920, "height": 1080}
+            viewport: 视口大小，如 {"width": 960, "height": 580}
             
         Returns:
             Tuple[Browser, BrowserContext, Page]: 浏览器、上下文、页面实例
@@ -92,12 +92,13 @@ class PlaywrightProvider:
             # 初始化WebRecorder进行录制（非阻塞）
             session_id = await recorder.initialize_recording(
                 unique_session_name,
-                "https://example.com",  # 占位URL，实际URL由用户代码控制
+                "https://baidu.com",  # 占位URL，实际URL由用户代码控制
                 output_dir=recording_output_dir or 'sessions',
                 custom_session_path=session_path,
                 auth_state_file=auth_state_file,
                 headless=headless,
-                viewport=viewport
+                viewport=viewport,
+                keep_folder=True
             )
             
             console.print(f"📋 录制会话已启动: {session_id}")
@@ -167,13 +168,22 @@ class PlaywrightProvider:
         console.print("🌐 启动普通模式")
         
         playwright = await async_playwright().start()
-        browser = await playwright.chromium.launch(headless=headless)
+        browser = await playwright.chromium.launch(
+            headless=headless,
+            args=[
+                '--disable-crashpad',
+                '--disable-crash-reporter',
+                '--crash-dump-directory=/Users/kausal/north_mcpify/tmp/playwright_crashpad',
+                '--disable-dev-shm-usage',
+                '--no-sandbox'
+            ]
+        )
         
         context_options = {}
         if viewport:
             context_options['viewport'] = viewport
         else:
-            context_options['viewport'] = {'width': 1920, 'height': 1080}
+            context_options['viewport'] = {"width": 960, "height": 580}
             
         # 如果提供了认证状态文件，加载它
         if auth_state_file:

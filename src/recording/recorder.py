@@ -8,6 +8,7 @@ import json
 import time
 import uuid
 import hashlib
+import re
 from datetime import datetime
 from pathlib import Path
 from typing import Dict, List, Optional, Any
@@ -39,9 +40,11 @@ class WebRecorder:
         self.page: Optional[Page] = None
         self.session_id: Optional[str] = None
         self.session_dir: Optional[Path] = None  # 添加session_dir属性
+        self.auth_state_save_path: Optional[str] = None  # 认证状态保存路径
         self.operations: List[Dict] = []
         self.context_capturer = ContextCapturer()
         self.event_listener = EventListener()
+        self.child_event_listeners: List[EventListener] = []
         self.cached_page_title: str = ''  # 缓存页面标题
         self.recording_interrupted: bool = False  # 标记录制是否被中断
         
@@ -72,15 +75,30 @@ class WebRecorder:
         url: str, 
         output_dir: str = 'sessions', 
         auth_state_file: Optional[str] = None,
-        headless: bool = False
+        auth_state_save_path: Optional[str] = None,
+        headless: bool = False,
+        session_id: Optional[str] = None
     ) -> str:
         """开始录制会话"""
-        self.session_id = f"session_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
-        session_dir = Path(output_dir) / self.session_id
+        # 如果指定了session_id，使用指定的；否则生成新的
+        if session_id:
+            self.session_id = session_id
+        else:
+            self.session_id = f"session_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
+        
+        # 支持完整路径输出目录
+        if Path(output_dir).is_absolute() or '/' in output_dir:
+            # 如果是绝对路径或包含路径分隔符，直接使用
+            session_dir = Path(output_dir)
+        else:
+            # 否则作为sessions下的子目录
+            session_dir = Path(output_dir) / self.session_id
+        
         session_dir.mkdir(parents=True, exist_ok=True)
         
         # 保存会话目录路径供后续使用
         self.session_dir = session_dir
+        self.auth_state_save_path = auth_state_save_path
         
         # 创建截图目录
         screenshots_dir = session_dir / 'screenshots'
@@ -106,7 +124,7 @@ class WebRecorder:
             
             # 创建上下文（使用认证状态如果提供了）
             context_kwargs = {
-                'viewport': {'width': 1920, 'height': 1080},
+                'viewport': {"width": 960, "height": 580},
                 'user_agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
             }
             
@@ -346,10 +364,103 @@ class WebRecorder:
                 configurable: false
             });
             
+            // 生成XPath（限制深度，避免过长）
+            Object.defineProperty(window, 'generateXPath', {
+                value: function(element) {
+                try {
+                    if (!element) return '';
+                    if (element.nodeType !== 1) element = element.parentElement;
+                    const maxDepth = 20;
+                    const segments = [];
+                    let el = element;
+                    let depth = 0;
+                    while (el && el.nodeType === 1 && depth < maxDepth) {
+                        let index = 1;
+                        let sib = el;
+                        while ((sib = sib.previousElementSibling)) {
+                            if (sib.tagName === el.tagName) index++;
+                        }
+                        segments.unshift(el.tagName.toLowerCase() + '[' + index + ']');
+                        el = el.parentElement;
+                        depth++;
+                    }
+                    return '//' + segments.join('/');
+                } catch (e) { return ''; }
+                },
+                writable: false,
+                configurable: false
+            });
+
+            // 生成跨iframe的frame trace（从顶层到当前frame）
+            Object.defineProperty(window, 'generateFrameTrace', {
+                value: function() {
+                try {
+                    function getFrameIndex(win) {
+                        try {
+                            if (!win.parent || win.parent === win) return null;
+                            const frames = win.parent.frames;
+                            for (let i = 0; i < frames.length; i++) {
+                                try { if (frames[i] === win) return i; } catch (_) {}
+                            }
+                            return null;
+                        } catch (_e) { return null; }
+                    }
+                    function buildXPathInParent(el) {
+                        try {
+                            if (!el) return null;
+                            const segs = [];
+                            let cur = el; let depth = 0;
+                            while (cur && cur.nodeType === 1 && depth < 20) {
+                                let ix = 1, sib = cur;
+                                while ((sib = sib.previousElementSibling)) { if (sib.tagName === cur.tagName) ix++; }
+                                segs.unshift(cur.tagName.toLowerCase() + '[' + ix + ']');
+                                cur = cur.parentElement; depth++;
+                            }
+                            return '//' + segs.join('/');
+                        } catch (_e) { return null; }
+                    }
+                    function getFrameElementInfo(win) {
+                        const info = { index: getFrameIndex(win), name: null, selector: null, xpath_in_parent: null, tag: 'iframe' };
+                        try { info.name = win.name || null; } catch (_) {}
+                        try {
+                            const fe = win.frameElement; // may throw on cross-origin
+                            if (fe) {
+                                const tag = (fe.tagName || '').toLowerCase();
+                                info.tag = tag || 'iframe';
+                                // selector hint
+                                if (fe.id) { info.selector = '#' + fe.id; }
+                                else if (fe.className && typeof fe.className === 'string') {
+                                    const cls = fe.className.trim().split(' ').filter(Boolean)[0];
+                                    info.selector = cls ? tag + '.' + cls : tag;
+                                } else { info.selector = tag; }
+                                info.xpath_in_parent = buildXPathInParent(fe);
+                            }
+                        } catch (_) { /* cross-origin, ignore */ }
+                        return info;
+                    }
+                    const chain = [];
+                    try {
+                        let w = window;
+                        while (w !== w.top) {
+                            chain.unshift(getFrameElementInfo(w));
+                            w = w.parent;
+                        }
+                    } catch (_e) {}
+                    let frameUrl = null;
+                    try { frameUrl = location.href; } catch (_) { frameUrl = null; }
+                    return { chain: chain, depth: chain.length, current_frame_url: frameUrl };
+                } catch (_err) { return { chain: [], depth: 0, current_frame_url: null }; }
+                },
+                writable: false,
+                configurable: false
+            });
+            
             // 等待DOM就绪的函数
             function setupEventListeners() {
-                // 点击事件监听（冒泡阶段），在元素选择模式下跳过
-                document.addEventListener('click', (event) => {
+                // 在window捕获阶段优先监听点击，避免被页面在window层stopPropagation拦截
+                window.addEventListener('click', (event) => {
+                    // 去重：若已在window捕获过，则不重复处理
+                    try { if (event.__automationCapturedByWindow) return; event.__automationCapturedByWindow = true; } catch (e) {}
                     try {
                         if (window.elementSelectionMode) {
                             // 选择模式下，普通点击不应被录制
@@ -360,15 +471,19 @@ class WebRecorder:
                         const element = event.target;
                         const selector = window.generateSelector(element);
                         const robust = window.generateRobustSelector(element);
+                        const xpath = (typeof window.generateXPath === 'function') ? window.generateXPath(element) : '';
                         
                         const eventData = {
                             type: 'click',
                             selector: selector,
                             robust_selector: robust,
+                            xpath: xpath,
                             text_content: element.textContent?.trim() || '',
                             timestamp: Date.now(),
                             x: event.clientX,
-                            y: event.clientY
+                            y: event.clientY,
+                            frame_url: (function(){ try { return location.href; } catch(_) { return null; } })(),
+                            frame_trace: (typeof window.generateFrameTrace === 'function') ? window.generateFrameTrace() : null
                         };
                         
                         // 预抓取元素快照，避免导航后选择器指向其它元素
@@ -391,6 +506,7 @@ class WebRecorder:
                             eventData.element_snapshot = {
                                 selector: selector,
                                 robust_selector: robust,
+                                xpath: xpath,
                                 element: {
                                     tagName: element.tagName,
                                     id: element.id,
@@ -410,6 +526,85 @@ class WebRecorder:
                             };
                         } catch (snapshotErr) { /* ignore */ }
                         
+                        try { if (typeof window.__automationEmit === 'function') { eventData.__delivered = true; window.__automationEmit(eventData); } } catch (e) {}
+                        window.webAutomationEvents.push(eventData);
+                        console.log('[WebAutomation] WindowCapture-点击事件已捕获:', eventData);
+                    } catch (e) {
+                        console.error('[WebAutomation] WindowCapture-点击事件处理失败:', e);
+                    }
+                }, true);
+
+                // 点击事件监听（冒泡阶段），在元素选择模式下跳过
+                document.addEventListener('click', (event) => {
+                    // 若window捕获已处理则跳过，避免重复
+                    try { if (event.__automationCapturedByWindow) return; } catch (e) {}
+                    try {
+                        if (window.elementSelectionMode) {
+                            // 选择模式下，普通点击不应被录制
+                            return;
+                        }
+                    } catch (e) { /* ignore */ }
+                    try {
+                        const element = event.target;
+                        const selector = window.generateSelector(element);
+                        const robust = window.generateRobustSelector(element);
+                        const xpath = (typeof window.generateXPath === 'function') ? window.generateXPath(element) : '';
+                        
+                        const eventData = {
+                            type: 'click',
+                            selector: selector,
+                            robust_selector: robust,
+                            xpath: xpath,
+                            text_content: element.textContent?.trim() || '',
+                            timestamp: Date.now(),
+                            x: event.clientX,
+                            y: event.clientY,
+                            frame_url: (function(){ try { return location.href; } catch(_) { return null; } })(),
+                            frame_trace: (typeof window.generateFrameTrace === 'function') ? window.generateFrameTrace() : null
+                        };
+                        
+                        // 预抓取元素快照，避免导航后选择器指向其它元素
+                        try {
+                            const rect = element.getBoundingClientRect();
+                            const attrs = {};
+                            for (const a of Array.from(element.attributes || [])) { attrs[a.name] = a.value; }
+                            const parent = element.parentElement;
+                            const parentSummary = parent ? {
+                                tagName: parent.tagName,
+                                id: parent.id,
+                                className: parent.className,
+                                children: Array.from(parent.children).slice(0, 10).map(c => ({
+                                    tagName: c.tagName,
+                                    id: c.id,
+                                    className: c.className,
+                                    textContent: (c.textContent || '').trim().substring(0, 80)
+                                }))
+                            } : null;
+                            eventData.element_snapshot = {
+                                selector: selector,
+                                robust_selector: robust,
+                                xpath: xpath,
+                                element: {
+                                    tagName: element.tagName,
+                                    id: element.id,
+                                    className: element.className,
+                                    textContent: (element.textContent || '').trim(),
+                                    innerHTML: element.innerHTML,
+                                    outerHTML: element.outerHTML,
+                                    attributes: attrs,
+                                    boundingRect: { x: rect.x, y: rect.y, width: rect.width, height: rect.height, top: rect.top, right: rect.right, bottom: rect.bottom, left: rect.left },
+                                    isVisible: element.offsetParent !== null,
+                                    computedStyle: ''
+                                },
+                                parent: parentSummary,
+                                page_title: document.title,
+                                page_url: location.href,
+                                timestamp: Date.now()
+                            };
+                        } catch (snapshotErr) { /* ignore */ }
+                        
+                        // （调试面板已关闭）
+
                         // 先通过桥接通道上报，再入队；标记避免重复处理
                         try { if (typeof window.__automationEmit === 'function') { eventData.__delivered = true; window.__automationEmit(eventData); } } catch (e) {}
                         window.webAutomationEvents.push(eventData);
@@ -424,12 +619,16 @@ class WebRecorder:
                     try {
                         const element = event.target;
                         const selector = window.generateSelector(element);
+                        const xpath = (typeof window.generateXPath === 'function') ? window.generateXPath(element) : '';
                         
                         const eventData = {
                             type: 'input',
                             selector: selector,
+                            xpath: xpath,
                             value: element.value || '',
-                            timestamp: Date.now()
+                            timestamp: Date.now(),
+                            frame_url: (function(){ try { return location.href; } catch(_) { return null; } })(),
+                            frame_trace: (typeof window.generateFrameTrace === 'function') ? window.generateFrameTrace() : null
                         };
                         
                         try { if (typeof window.__automationEmit === 'function') { eventData.__delivered = true; window.__automationEmit(eventData); } } catch (e) {}
@@ -494,7 +693,7 @@ class WebRecorder:
                         width: 100%;
                         height: 100%;
                         background: rgba(0, 0, 0, 0.3);
-                        z-index: 99998;
+                        z-index: 2147483646;
                         pointer-events: none;
                         transition: clip-path 60ms linear;
                     }
@@ -509,7 +708,9 @@ class WebRecorder:
                         border-radius: 8px;
                         font-family: -apple-system, BlinkMacSystemFont, sans-serif;
                         font-size: 16px;
-                        z-index: 99999;
+                        z-index: 2147483647;
+                        pointer-events: none;
+                        user-select: none;
                         box-shadow: 0 4px 20px rgba(0,0,0,0.3);
                     }
                     #element-selection-hover-rect {
@@ -525,7 +726,7 @@ class WebRecorder:
                 document.head.appendChild(styles);
             };
             
-            // 启用元素选择模式
+            // 启用元素选择模式（仅当前frame；UI仅在顶层显示）
             window.enableElementSelection = function() {
                 if (window.elementSelectionMode) return;
                 
@@ -533,26 +734,71 @@ class WebRecorder:
                 window.elementSelectionMode = true;
                 window.addSelectionStyles();
                 
-                // 创建遮罩层和提示
-                const overlay = document.createElement('div');
-                overlay.id = 'element-selection-overlay';
-                document.body.appendChild(overlay);
-                
-                const notice = document.createElement('div');
-                notice.id = 'element-selection-notice';
-                notice.innerHTML = '🎯 选择包含目标内容的元素<br><small>点击确认选择，按ESC取消</small>';
-                document.body.appendChild(notice);
-                
-                // 悬浮矩形框（高亮边框，不依赖目标元素样式）
-                const hoverRect = document.createElement('div');
-                hoverRect.id = 'element-selection-hover-rect';
-                document.body.appendChild(hoverRect);
+                // 顶层窗口才显示遮罩与提示，避免多frame重复提示
+                try {
+                    const isTop = (window.top === window.self);
+                    if (isTop) {
+                        // 创建遮罩层和提示（若不存在再创建）
+                        if (!document.getElementById('element-selection-overlay')) {
+                            const overlay = document.createElement('div');
+                            overlay.id = 'element-selection-overlay';
+                            (document.body || document.documentElement).appendChild(overlay);
+                        }
+                        if (!document.getElementById('element-selection-notice')) {
+                            const notice = document.createElement('div');
+                            notice.id = 'element-selection-notice';
+                            notice.innerHTML = '🎯 选择包含目标内容的元素<br><small>点击确认选择，按ESC取消</small>';
+                            (document.body || document.documentElement).appendChild(notice);
+                        }
+                        if (!document.getElementById('element-selection-hover-rect')) {
+                            const hoverRect = document.createElement('div');
+                            hoverRect.id = 'element-selection-hover-rect';
+                            (document.body || document.documentElement).appendChild(hoverRect);
+                        }
+                    }
+                } catch (e) { /* ignore */ }
                 
                 // 鼠标移动事件
                 document.addEventListener('mousemove', window.handleElementHover, true);
                 document.addEventListener('click', window.handleElementClick, true);
                 document.addEventListener('keydown', window.handleElementSelectionKeydown, true);
             };
+
+            // 在所有frame中启用元素选择模式（跨域通过postMessage广播）
+            window.enableElementSelectionAll = function() {
+                try { window.enableElementSelection(); } catch (_) {}
+                try {
+                    // 同源直接调用
+                    for (var i = 0; i < window.frames.length; i++) {
+                        try { window.frames[i].enableElementSelection && window.frames[i].enableElementSelection(); } catch (e) { /* 可能跨域 */ }
+                    }
+                    // 同源父级/顶层直接调用
+                    try { if (window.parent && window.parent !== window && window.parent.enableElementSelection) { window.parent.enableElementSelection(); } } catch (e) {}
+                    try { if (window.top && window.top !== window && window.top.enableElementSelection) { window.top.enableElementSelection(); } } catch (e) {}
+                } catch (e) {}
+                try {
+                    // 跨域广播
+                    for (var j = 0; j < window.frames.length; j++) {
+                        try { window.frames[j].postMessage({ __automationCmd: 'enable_selection' }, '*'); } catch (e) {}
+                    }
+                    try { if (window.parent && window.parent !== window) { window.parent.postMessage({ __automationCmd: 'enable_selection' }, '*'); } } catch (e) {}
+                    try { if (window.top && window.top !== window) { window.top.postMessage({ __automationCmd: 'enable_selection' }, '*'); } } catch (e) {}
+                } catch (e) {}
+            };
+
+            // 接收跨域消息以在子frame内启用选择
+            try {
+                window.addEventListener('message', function(ev){
+                    try {
+                        var data = ev && ev.data;
+                        if (data && data.__automationCmd === 'enable_selection') {
+                            window.enableElementSelection();
+                        } else if (data && data.__automationCmd === 'disable_selection') {
+                            window.disableElementSelection();
+                        }
+                    } catch (e) {}
+                }, true);
+            } catch (e) {}
             
             // 禁用元素选择模式
             window.disableElementSelection = function() {
@@ -572,13 +818,11 @@ class WebRecorder:
                 document.removeEventListener('click', window.handleElementClick, true);
                 document.removeEventListener('keydown', window.handleElementSelectionKeydown, true);
                 
-                // 清理UI元素
+                // 清理UI元素（如果存在；通常只存在于顶层窗口）
                 const overlay = document.getElementById('element-selection-overlay');
                 if (overlay) overlay.remove();
-                
                 const notice = document.getElementById('element-selection-notice');
                 if (notice) notice.remove();
-                
                 const hoverRect = document.getElementById('element-selection-hover-rect');
                 if (hoverRect) hoverRect.remove();
                 
@@ -671,6 +915,7 @@ class WebRecorder:
                     // 记录选中的元素信息
                     const selector = window.generateSelector(element);
                     const robust = window.generateRobustSelector(element);
+                    const rect = element.getBoundingClientRect();
                     const elementInfo = {
                         type: 'element_selected',
                         selector: selector,
@@ -679,10 +924,21 @@ class WebRecorder:
                         id: element.id || null,
                         className: element.className || null,
                         textContent: element.textContent?.trim().substring(0, 200) || '',
-                        timestamp: Date.now()
+                        timestamp: Date.now(),
+                        boundingRect: { left: rect.left, top: rect.top, width: rect.width, height: rect.height },
+                        frame_url: location.href,
+                        xpath: (typeof window.generateXPath === 'function') ? window.generateXPath(element) : '',
+                        frame_trace: (typeof window.generateFrameTrace === 'function') ? window.generateFrameTrace() : null
                     };
                     
-                    // 将选择信息添加到事件队列
+                    // 通过快速通道优先上报，避免iframe队列无法被顶层轮询
+                    try {
+                        if (typeof window.__automationEmit === 'function') {
+                            elementInfo.__delivered = true;
+                            window.__automationEmit(elementInfo);
+                        }
+                    } catch (e) {}
+                    // 同时入队作为兜底
                     window.webAutomationEvents.push(elementInfo);
                     
                     console.log('[WebAutomation] 元素已选择:', elementInfo);
@@ -708,17 +964,29 @@ class WebRecorder:
                     if ((event.metaKey || event.ctrlKey) && key === 'y') {
                         event.preventDefault();
                         console.log('[WebAutomation] 快捷键触发元素选择');
+                        // 防止重复触发：若已处于选择模式则忽略
+                        if (window.elementSelectionMode) { return; }
                         // 通知Python端进入元素选择模式
-                        window.webAutomationEvents.push({
-                            type: 'element_selection_mode_start',
-                            timestamp: Date.now()
-                        });
-                        window.enableElementSelection();
+                        (function(){
+                            const evt = { type: 'element_selection_mode_start', timestamp: Date.now() };
+                            try { if (typeof window.__automationEmit === 'function') { evt.__delivered = true; window.__automationEmit(evt); } } catch (e) {}
+                            try { window.webAutomationEvents.push(evt); } catch (e) {}
+                        })();
+                        // 同步在所有frame开启选择，避免首次按键不生效
+                        if (typeof window.enableElementSelectionAll === 'function') {
+                            window.enableElementSelectionAll();
+                        } else {
+                            window.enableElementSelection();
+                        }
                     }
                 } catch (_) {}
             }
-            document.addEventListener('keydown', __handleSelectionHotkey, true);
-            try { window.addEventListener('keydown', __handleSelectionHotkey, true); } catch (e) {}
+            // 安装热键监听（每个页面仅安装一次）
+            if (!window.__selectionHotkeyInstalled) {
+                window.__selectionHotkeyInstalled = true;
+                document.addEventListener('keydown', __handleSelectionHotkey, true);
+                try { window.addEventListener('keydown', __handleSelectionHotkey, true); } catch (e) {}
+            }
             
             // 兼容旧浏览器/不同布局下的快捷键（key可能是'Y'）
             document.addEventListener('keydown', function(event){
@@ -889,9 +1157,15 @@ class WebRecorder:
             # 尝试保存认证状态
             try:
                 if self.context:
-                    auth_state_path = session_dir / 'auth_state.json'
+                    # 优先保存到指定路径，否则保存到session目录
+                    if self.auth_state_save_path:
+                        auth_state_path = Path(self.auth_state_save_path)
+                        auth_state_path.parent.mkdir(parents=True, exist_ok=True)
+                    else:
+                        auth_state_path = session_dir / 'auth_state.json'
+                    
                     await self.context.storage_state(path=str(auth_state_path))
-                    console.print("✅ 认证状态已保存")
+                    console.print(f"✅ 认证状态已保存到: {auth_state_path}")
                 else:
                     console.print("⚠️  上下文已关闭，跳过认证状态保存", style="yellow")
             except Exception as e:
@@ -945,6 +1219,56 @@ class WebRecorder:
         console.print("🛑 收到停止录制信号...")
         self.stop_recording_flag = True
         console.print("✅ 录制停止标志已设置")
+
+    def _resolve_event_page(self, event_data: Dict) -> Optional[Page]:
+        """根据事件数据解析应使用的Page。
+        优先: __page → 通过frame/page_url在context.pages匹配 → self.page
+        """
+        try:
+            # 直接携带的Page对象
+            if isinstance(event_data, dict):
+                page_obj = event_data.get('__page')
+                try:
+                    if page_obj and hasattr(page_obj, 'is_closed') and not page_obj.is_closed():
+                        return page_obj
+                except Exception:
+                    pass
+
+                # URL提示
+                frame_url = None
+                try:
+                    frame_url = (
+                        (event_data.get('element_snapshot') or {}).get('page_url')
+                        or event_data.get('frame_url')
+                        or event_data.get('page_url')
+                    )
+                except Exception:
+                    frame_url = None
+
+                if self.context:
+                    try:
+                        pages = list(self.context.pages)
+                        # 优先精确匹配
+                        for p in pages:
+                            try:
+                                pu = p.url or ''
+                                if frame_url and pu == frame_url and (not p.is_closed()):
+                                    return p
+                            except Exception:
+                                continue
+                        # 其次包含匹配
+                        for p in pages:
+                            try:
+                                pu = p.url or ''
+                                if frame_url and (frame_url in pu or pu in frame_url) and (not p.is_closed()):
+                                    return p
+                            except Exception:
+                                continue
+                    except Exception:
+                        pass
+        except Exception:
+            pass
+        return self.page
     
     async def remove_initialization_overlay(self):
         """移除初始化遮罩（供事件监听器调用）"""
@@ -955,6 +1279,19 @@ class WebRecorder:
                 console.print("🎉 [bold green]现在可以开始操作网页了！[/bold green]")
         except Exception as e:
             console.print(f"⚠️ 无法移除遮罩: {e}", style="yellow")
+
+    async def remove_initialization_overlay_on_page(self, target_page: Page):
+        """在指定页面上移除初始化遮罩。"""
+        try:
+            if target_page:
+                await target_page.evaluate("window.__automationHideOverlay && window.__automationHideOverlay()")
+                try:
+                    url = target_page.url
+                except Exception:
+                    url = 'unknown'
+                console.print(f"✅ 初始化遮罩已在新页面移除: {url}")
+        except Exception as e:
+            console.print(f"⚠️ 无法在新页面移除遮罩: {e}", style="yellow")
     
     async def initialize_recording(
         self, 
@@ -964,7 +1301,8 @@ class WebRecorder:
         custom_session_path: Optional[str] = None,
         auth_state_file: Optional[str] = None,
         headless: bool = False,
-        viewport: Optional[Dict[str, int]] = None
+        viewport: Optional[Dict[str, int]] = None,
+        keep_folder: bool = False
     ) -> str:
         """初始化录制会话（非阻塞）"""
         
@@ -975,7 +1313,7 @@ class WebRecorder:
             console.print(f"📁 使用自定义路径: {session_dir}")
             
             # 如果路径已存在，先删除再创建（覆盖模式）
-            if session_dir.exists():
+            if session_dir.exists() and not keep_folder:
                 console.print(f"⚠️  路径已存在，将覆盖: {session_dir}")
                 import shutil
                 shutil.rmtree(session_dir)
@@ -1011,12 +1349,15 @@ class WebRecorder:
             args=[
                 '--disable-blink-features=AutomationControlled',
                 '--disable-dev-shm-usage',
+                '--disable-crashpad',
+                '--disable-crash-reporter',
+                '--crash-dump-directory=/Users/kausal/north_mcpify/tmp/playwright_crashpad',
                 '--no-sandbox'
             ]
         )
         
         # 创建上下文（使用认证状态如果提供了）
-        default_viewport = viewport or {'width': 1920, 'height': 1080}
+        default_viewport = viewport or {"width": 960, "height": 580}
         context_kwargs = {
             'viewport': default_viewport,
             'user_agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
@@ -1120,62 +1461,249 @@ class WebRecorder:
         await self.context.add_init_script("""
         console.log('[WebAutomation] Context级别初始化事件监听器');
         
-        // 确保只初始化一次，并增强持久性
-        if (!window.webAutomationEvents) {
-            // 使用defineProperty增强持久性，防止被页面脚本覆盖
-            Object.defineProperty(window, 'webAutomationEvents', {
-                value: [],
-                writable: true,
-                configurable: false  // 防止被delete
-            });
-            console.log('[WebAutomation] 事件数组已创建（受保护）');
-            
-            // 生成CSS选择器函数
-            window.generateSelector = function(element) {
+        // 标记与保护
+        try {
+            Object.defineProperty(window, '__webAutomationProtected', { value: true, writable: false, configurable: false });
+        } catch (e) {}
+        
+        // 遮罩函数（供Python端在就绪后移除）
+        try {
+            if (!window.__automationOverlayInitialized) {
+                window.__automationOverlayInitialized = true;
+                window.__automationShowOverlay = function(message) {
+                    try {
+                        var existing = document.getElementById('webautomation-init-overlay');
+                        if (existing) {
+                            var m = document.getElementById('webautomation-init-message');
+                            if (m) m.textContent = message || '正在初始化事件监听器，请稍候...';
+                            return;
+                        }
+                        var ov = document.createElement('div');
+                        ov.id = 'webautomation-init-overlay';
+                        ov.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.55);z-index:2147483647;display:flex;align-items:center;justify-content:center;pointer-events:all;';
+                        var box = document.createElement('div');
+                        box.style.cssText = 'background:#111;color:#fff;padding:16px 22px;border-radius:10px;border:2px solid #3aa3ff;font-family:-apple-system,BlinkMacSystemFont,Segoe UI,Roboto,Helvetica Neue,Arial,sans-serif;box-shadow:0 6px 30px rgba(0,0,0,0.35);text-align:center;';
+                        var spinner = document.createElement('div');
+                        spinner.style.cssText = 'margin:0 auto 10px;width:24px;height:24px;border-radius:50%;border:3px solid #3aa3ff;border-top-color:transparent;animation:webautomation-spin 0.8s linear infinite;';
+                        var msg = document.createElement('div');
+                        msg.id = 'webautomation-init-message';
+                        msg.style.cssText = 'font-size:14px;letter-spacing:0.2px;color:#fff;';
+                        msg.textContent = message || '正在初始化事件监听器，请稍候...';
+                        box.appendChild(spinner);
+                        box.appendChild(msg);
+                        ov.appendChild(box);
+                        (document.body || document.documentElement).appendChild(ov);
+                        var style = document.getElementById('webautomation-init-style');
+                        if (!style) {
+                            style = document.createElement('style');
+                            style.id = 'webautomation-init-style';
+                            style.textContent = '@keyframes webautomation-spin { from { transform: rotate(0deg);} to { transform: rotate(360deg);} }';
+                            document.head.appendChild(style);
+                        }
+                    } catch (e) {}
+                };
+                window.__automationUpdateOverlay = function(message) {
+                    try { var m = document.getElementById('webautomation-init-message'); if (m) m.textContent = message || '正在初始化事件监听器，请稍候...'; } catch (e) {}
+                };
+                window.__automationHideOverlay = function() {
+                    try {
+                        var ov = document.getElementById('webautomation-init-overlay');
+                        if (ov) ov.remove();
+                        var style = document.getElementById('webautomation-init-style');
+                        if (style) style.remove();
+                        try { sessionStorage.setItem('__automation_init_done', '1'); } catch (e) {}
+                    } catch (e) {}
+                };
+            }
+        } catch (e) {}
+        
+        // 立即显示一次遮罩（仅在顶层）
+        try {
+            var isTop = false; try { isTop = (window.top === window.self); } catch(_) {}
+            if (isTop) {
+                if (typeof window.__automationShowOverlay === 'function') {
+                    if (window.location && window.location.href === 'about:blank') {
+                        window.__automationShowOverlay('准备导航到目标页面...');
+                    } else {
+                        window.__automationShowOverlay('页面加载中，正在初始化事件监听器...');
+                    }
+                }
+            }
+        } catch (e) {}
+        
+        // 事件队列与选择器工具
+        try {
+            if (!window.webAutomationEvents) {
+                Object.defineProperty(window, 'webAutomationEvents', { value: [], writable: true, configurable: false });
+            }
+        } catch (e) { window.webAutomationEvents = window.webAutomationEvents || []; }
+        
+        // 过滤临时类
+        try {
+            if (!window.__isInstrumentationClass) {
+                Object.defineProperty(window, '__isInstrumentationClass', { value: function(cls){ if(!cls) return false; if(cls==='element-hover-highlight') return true; if(cls==='element-selection-hover-rect') return true; if(cls.indexOf('webautomation-')===0) return true; if(cls.indexOf('element-selection-')===0) return true; return false; }, writable:false, configurable:false });
+            }
+            if (!window.__filterInstrumentationClasses) {
+                Object.defineProperty(window, '__filterInstrumentationClasses', { value: function(className){ if(!className||typeof className!=='string') return []; return className.split(' ').filter(c=>c && !window.__isInstrumentationClass(c)); }, writable:false, configurable:false });
+            }
+        } catch (e) {}
+        
+        // 选择器工具
+        if (typeof window.generateSelector !== 'function') {
+            window.generateSelector = function(element){
                 try {
                     if (!element) return 'unknown';
-                    
-                    if (element.id) {
-                        return '#' + element.id;
-                    }
-                    
+                    if (element.id) return '#' + element.id;
                     if (element.className && typeof element.className === 'string') {
-                        const classes = element.className.split(' ').filter(c => c.trim());
-                        if (classes.length > 0) {
-                            return '.' + classes.join('.');
-                        }
+                        const classes = (window.__filterInstrumentationClasses?window.__filterInstrumentationClasses(element.className):element.className.split(' ')).filter(Boolean);
+                        if (classes.length > 0) return '.' + classes.join('.');
                     }
-                    
                     let selector = element.tagName.toLowerCase();
-                    
-                    if (element.type) {
-                        selector += `[type="${element.type}"]`;
-                    }
-                    
-                    if (element.name) {
-                        selector += `[name="${element.name}"]`;
-                    }
-                    
-                    // 如果还是不够特异，添加nth-child
+                    if (element.type) selector += `[type="${element.type}"]`;
+                    if (element.name) selector += `[name="${element.name}"]`;
                     const parent = element.parentElement;
                     if (parent) {
-                        const siblings = Array.from(parent.children).filter(
-                            child => child.tagName === element.tagName
-                        );
+                        const siblings = Array.from(parent.children).filter(child => child.tagName === element.tagName);
                         if (siblings.length > 1) {
                             const index = siblings.indexOf(element) + 1;
                             selector += `:nth-child(${index})`;
                         }
                     }
-                    
                     return selector;
-                } catch (e) {
-                    console.error('[WebAutomation] 选择器生成失败:', e);
-                    return 'unknown';
-                }
+                } catch(e) { return 'unknown'; }
             };
-        } else {
-            console.log('[WebAutomation] Context事件监听器已存在，跳过初始化');
+        }
+        if (typeof window.generateRobustSelector !== 'function') {
+            window.generateRobustSelector = function(element){
+                try {
+                    if (!element) return 'unknown';
+                    if (element.id) return '#' + element.id;
+                    const parts = []; let el = element; let guard = 0;
+                    while (el && el.nodeType === 1 && guard++ < 6) {
+                        let part = el.tagName.toLowerCase();
+                        if (el.id) { part = part + '#' + el.id; parts.unshift(part); break; }
+                        const className = (el.className || '').trim();
+                        if (className && typeof className === 'string') {
+                            const firstClass = (window.__filterInstrumentationClasses?window.__filterInstrumentationClasses(className):className.split(' ')).filter(Boolean)[0];
+                            if (firstClass) part += '.' + firstClass;
+                        }
+                        let nth = 1, sib = el;
+                        while ((sib = sib.previousElementSibling)) { if (sib.tagName === el.tagName) nth++; }
+                        part += `:nth-of-type(${nth})`;
+                        parts.unshift(part);
+                        el = el.parentElement;
+                    }
+                    return parts.join(' > ');
+                } catch(e) { return window.generateSelector(element); }
+            };
+        }
+        if (typeof window.generateXPath !== 'function') {
+            window.generateXPath = function(element){
+                try {
+                    if (!element) return '';
+                    if (element.nodeType !== 1) element = element.parentElement;
+                    const maxDepth = 20; const segments = []; let el = element; let depth = 0;
+                    while (el && el.nodeType === 1 && depth < maxDepth) {
+                        let index = 1; let sib = el;
+                        while ((sib = sib.previousElementSibling)) { if (sib.tagName === el.tagName) index++; }
+                        segments.unshift(el.tagName.toLowerCase() + '[' + index + ']');
+                        el = el.parentElement; depth++;
+                    }
+                    return '//' + segments.join('/');
+                } catch(e) { return ''; }
+            };
+        }
+        if (typeof window.generateFrameTrace !== 'function') {
+            window.generateFrameTrace = function(){
+                try {
+                    function getFrameIndex(win){ try { if(!win.parent||win.parent===win) return null; const frames = win.parent.frames; for (let i=0;i<frames.length;i++){ try{ if(frames[i]===win) return i; } catch(_){} } return null; } catch(_){ return null; } }
+                    function buildXPathInParent(el){ try { if(!el) return null; const segs=[]; let cur=el; let depth=0; while(cur && cur.nodeType===1 && depth<20){ let ix=1, sib=cur; while((sib=sib.previousElementSibling)) { if(sib.tagName===cur.tagName) ix++; } segs.unshift(cur.tagName.toLowerCase()+'['+ix+']'); cur=cur.parentElement; depth++; } return '//' + segs.join('/'); } catch(_){ return null; } }
+                    function getFrameElementInfo(win){ const info={ index:getFrameIndex(win), name:null, selector:null, xpath_in_parent:null, tag:'iframe', frame_url:null }; try{ info.name = win.name || null; }catch(_){ } try{ info.frame_url = win.location && win.location.href || null; }catch(_){ info.frame_url = null; } try{ const fe = win.frameElement; if (fe) { const tag=(fe.tagName||'').toLowerCase(); info.tag = tag || 'iframe'; if (fe.id) info.selector = '#' + fe.id; else if (fe.className && typeof fe.className === 'string') { const cls=fe.className.trim().split(' ').filter(Boolean)[0]; info.selector = cls ? tag + '.' + cls : tag; } else { info.selector = tag; } info.xpath_in_parent = buildXPathInParent(fe); } }catch(_){ } return info; }
+                    const chain=[]; try { let w=window; while (w!==w.top) { chain.unshift(getFrameElementInfo(w)); w=w.parent; } } catch(_){ }
+                    let curUrl=null; try { curUrl = location.href; } catch(_){ }
+                    return { chain: chain, depth: chain.length, current_frame_url: curUrl };
+                } catch(_) { return { chain: [], depth: 0, current_frame_url: null }; }
+            };
+        }
+        
+        // 防重复标记
+        if (!window.__automationCaptureAttached) {
+            window.__automationCaptureAttached = true;
+            
+            // 优先window捕获点击
+            window.addEventListener('click', (event) => {
+                try { if (event.__automationCapturedByWindow) return; event.__automationCapturedByWindow = true; } catch(e) {}
+                try {
+                    if (window.elementSelectionMode) return;
+                    const el = event.target;
+                    const data = {
+                        type: 'click',
+                        selector: (typeof window.generateSelector==='function')?window.generateSelector(el):'',
+                        robust_selector: (typeof window.generateRobustSelector==='function')?window.generateRobustSelector(el):'',
+                        xpath: (typeof window.generateXPath==='function')?window.generateXPath(el):'',
+                        text_content: (el && el.textContent||'').trim(),
+                        timestamp: Date.now(),
+                        x: event.clientX,
+                        y: event.clientY,
+                        frame_url: (function(){ try { return location.href; } catch(_) { return null; } })(),
+                        frame_trace: (typeof window.generateFrameTrace==='function')?window.generateFrameTrace():null
+                    };
+                    try { if (typeof window.__automationEmit==='function') { data.__delivered=true; window.__automationEmit(data); } } catch(e) {}
+                    try { window.webAutomationEvents.push(data); } catch(_) {}
+                } catch(e) {}
+            }, true);
+            
+            // 文档捕获点击（补充）
+            document.addEventListener('click', (event) => {
+                try { if (event.__automationCapturedByWindow) return; } catch(e) {}
+                try {
+                    if (window.elementSelectionMode) return;
+                    const el = event.target;
+                    const data = {
+                        type: 'click',
+                        selector: (typeof window.generateSelector==='function')?window.generateSelector(el):'',
+                        robust_selector: (typeof window.generateRobustSelector==='function')?window.generateRobustSelector(el):'',
+                        xpath: (typeof window.generateXPath==='function')?window.generateXPath(el):'',
+                        text_content: (el && el.textContent||'').trim(),
+                        timestamp: Date.now(),
+                        x: event.clientX,
+                        y: event.clientY,
+                        frame_url: (function(){ try { return location.href; } catch(_) { return null; } })(),
+                        frame_trace: (typeof window.generateFrameTrace==='function')?window.generateFrameTrace():null
+                    };
+                    try { if (typeof window.__automationEmit==='function') { data.__delivered=true; window.__automationEmit(data); } } catch(e) {}
+                    try { window.webAutomationEvents.push(data); } catch(_) {}
+                } catch(e) {}
+            }, true);
+            
+            // 输入事件
+            document.addEventListener('input', (event) => {
+                try {
+                    const el = event.target;
+                    const data = {
+                        type: 'input',
+                        selector: (typeof window.generateSelector==='function')?window.generateSelector(el):'',
+                        xpath: (typeof window.generateXPath==='function')?window.generateXPath(el):'',
+                        value: (el && (el.value||'')) || '',
+                        timestamp: Date.now(),
+                        frame_url: (function(){ try { return location.href; } catch(_) { return null; } })(),
+                        frame_trace: (typeof window.generateFrameTrace==='function')?window.generateFrameTrace():null
+                    };
+                    try { if (typeof window.__automationEmit==='function') { data.__delivered=true; window.__automationEmit(data); } } catch(e) {}
+                    try { window.webAutomationEvents.push(data); } catch(_) {}
+                } catch(e) {}
+            }, true);
+            
+            // 导航拦截提示
+            const navHandler = () => {
+                try {
+                    const navEvent = { type: 'navigation_intercepted', url: (function(){ try { return location.href; } catch(_) { return null; } })(), timestamp: Date.now() };
+                    try { if (typeof window.__automationEmit==='function') { navEvent.__delivered=true; window.__automationEmit(navEvent); } } catch(e) {}
+                    try { window.webAutomationEvents.push(navEvent); } catch(_) {}
+                } catch(e) {}
+            };
+            window.addEventListener('beforeunload', navHandler, { capture: true });
+            window.addEventListener('pagehide', navHandler, { capture: true });
         }
         """)
         console.print("✅ Context级别JavaScript已注入")
@@ -1198,9 +1726,15 @@ class WebRecorder:
         # 尝试保存认证状态
         try:
             if self.context:
-                auth_state_path = session_dir / 'auth_state.json'
+                # 优先保存到指定路径，否则保存到session目录
+                if self.auth_state_save_path:
+                    auth_state_path = Path(self.auth_state_save_path)
+                    auth_state_path.parent.mkdir(parents=True, exist_ok=True)
+                else:
+                    auth_state_path = session_dir / 'auth_state.json'
+                
                 await self.context.storage_state(path=str(auth_state_path))
-                console.print("✅ 认证状态已保存")
+                console.print(f"✅ 认证状态已保存到: {auth_state_path}")
         except Exception as e:
             console.print(f"⚠️  保存认证状态失败: {e}", style="yellow")
         
@@ -1280,7 +1814,13 @@ class WebRecorder:
                 # 拍摄选中元素的高亮截图
                 console.print("🔄 正在执行截图...")
                 try:
-                    await self._take_selected_element_screenshot(event_data)
+                    target_page = None
+                    try:
+                        if isinstance(event_data, dict):
+                            target_page = event_data.get('__page')
+                    except Exception:
+                        target_page = None
+                    await self._take_selected_element_screenshot(element_data=event_data, target_page=target_page)
                     console.print("✅ 选中元素截图已完成")
                     
                     # 延迟1秒确保截图文件写入完成
@@ -1321,6 +1861,11 @@ class WebRecorder:
         # 注册事件处理器（暂时只监听点击和输入）
         try:
             console.print("🔗 开始设置事件处理器...")
+            # 将回调保存到实例，供新页面复用
+            self._on_click_cb = safe_handle_click
+            self._on_input_cb = safe_handle_input
+            self._on_element_selection_cb = safe_handle_element_selection
+            self._on_element_selection_mode_start_cb = safe_handle_element_selection_mode_start
             await self.event_listener.setup_listeners(
                 self.page,
                 on_click=safe_handle_click,
@@ -1332,12 +1877,85 @@ class WebRecorder:
             )
             console.print("✅ 事件处理器设置完成")
             console.print(f"📊 当前operations数量: {len(self.operations)}")
+
+            # 监听context层面的新页面（包括window.open/target=_blank等）
+            try:
+                def _handle_new_page(new_page):
+                    try:
+                        console.print(f"🆕 检测到新页面: {getattr(new_page, 'url', 'N/A')}")
+                    except Exception:
+                        console.print("🆕 检测到新页面")
+                    asyncio.create_task(self._setup_listeners_for_page(new_page))
+
+                self.context.on('page', _handle_new_page)
+                console.print("✅ 已注册Context新页面监听")
+            except Exception as e:
+                console.print(f"⚠️  注册Context新页面监听失败: {e}")
+
+            # 监听当前页的popup事件
+            try:
+                def _handle_popup(popup_page):
+                    try:
+                        console.print(f"🪟 检测到弹出页: {getattr(popup_page, 'url', 'N/A')}")
+                    except Exception:
+                        console.print("🪟 检测到弹出页")
+                    asyncio.create_task(self._setup_listeners_for_page(popup_page))
+
+                if self.page:
+                    self.page.on('popup', _handle_popup)
+                    console.print("✅ 已注册当前页Popup监听")
+            except Exception as e:
+                console.print(f"⚠️  注册Popup监听失败: {e}")
         except Exception as e:
             console.print(f"❌ 事件监听器设置失败: {e}")
             console.print(f"❌ 错误类型: {type(e).__name__}")
             import traceback
             console.print(f"❌ 错误堆栈: {traceback.format_exc()}")
             raise  # 重新抛出错误让上层处理
+
+    async def _setup_listeners_for_page(self, new_page: Page):
+        """为新打开的页面/弹窗设置事件监听器。"""
+        try:
+            # 等待DOM ready但不强依赖
+            try:
+                await new_page.wait_for_load_state('domcontentloaded', timeout=8000)
+            except Exception as e:
+                console.print(f"⚠️  新页面DOM加载等待异常: {e}")
+
+            # 为每个新页面创建独立的EventListener实例
+            child_listener = EventListener()
+            self.child_event_listeners.append(child_listener)
+
+            await child_listener.setup_listeners(
+                new_page,
+                on_click=getattr(self, '_on_click_cb', None),
+                on_input=getattr(self, '_on_input_cb', None),
+                on_navigation=None,
+                on_element_selection=getattr(self, '_on_element_selection_cb', None),
+                on_element_selection_mode_start=getattr(self, '_on_element_selection_mode_start_cb', None),
+                recorder=self
+            )
+            console.print("✅ 新页面事件监听器设置完成")
+
+            # 新页面监听器就绪后，移除该页面的初始化遮罩
+            try:
+                await self.remove_initialization_overlay_on_page(new_page)
+            except Exception as e:
+                console.print(f"⚠️  无法在新页面移除遮罩: {e}")
+
+            # 继续监听该新页面的popup链
+            try:
+                def _handle_nested_popup(popup_page):
+                    console.print("🪟 检测到二级弹出页")
+                    asyncio.create_task(self._setup_listeners_for_page(popup_page))
+                new_page.on('popup', _handle_nested_popup)
+            except Exception:
+                pass
+
+        except Exception as e:
+            console.print(f"❌ 新页面事件监听器设置失败: {e}")
+            import traceback
+            console.print(f"❌ 错误堆栈: {traceback.format_exc()}")
     
     async def _record_operation(self, action: str, event_data: Dict, step_id: int):
         """记录操作（带锁）。返回已追加的operation字典。"""
@@ -1363,19 +1981,59 @@ class WebRecorder:
             console.print(f"🎯 目标选择器: {event_data.get('selector', 'N/A')}")
             
             try:
+                # 选择用于截图的页面：优先使用事件来源页面，其次回退到主page
+                target_page = self._resolve_event_page(event_data)
+                
                 # 基本页面状态检查
-                if not self.page:
+                if not target_page:
                     raise Exception("页面对象不存在")
                 
-                console.print(f"🚀 跳过页面状态检查，直接进行截图: {event_data.get('selector', '')}")
+                try:
+                    current_url = target_page.url
+                except Exception:
+                    current_url = 'unknown'
+                console.print(f"🚀 使用页面进行截图: {current_url}")
                 
                 # 高亮截图功能
                 console.print(f"⏳ 等待截图锁并进行截图: {event_data.get('selector', '')}")
                 screenshot_success = False
                 try:
                     # 添加超时避免无限等待
+                    # 传递frame_url用于在具体iframe内执行高亮脚本
+                    frame_url = None
+                    try:
+                        if isinstance(event_data, dict):
+                            frame_url = (
+                                (event_data.get('element_snapshot') or {}).get('page_url')
+                                or event_data.get('frame_url')
+                                or event_data.get('page_url')
+                            )
+                    except Exception:
+                        frame_url = None
+                    # 组合一个用于显示的信息路径（跨iframe）
+                    try:
+                        top_url_for_display = None
+                        try:
+                            top_url_for_display = target_page.url
+                        except Exception:
+                            top_url_for_display = None
+                        composed_display = self._compose_cross_frame_xpath(
+                            (event_data.get('frame_trace') if isinstance(event_data, dict) else None),
+                            (event_data.get('xpath', '') if isinstance(event_data, dict) else ''),
+                            top_url_for_display
+                        )
+                    except Exception:
+                        composed_display = (event_data.get('xpath', '') if isinstance(event_data, dict) else '')
+
                     await asyncio.wait_for(
-                        self._take_highlighted_screenshot(full_screenshot_path, event_data.get('selector', '')),
+                        self._take_highlighted_screenshot(
+                            full_screenshot_path,
+                            # 用于定位：优先使用xpath；若无则fallback为selector
+                            (event_data.get('xpath', '') if isinstance(event_data, dict) else '') or event_data.get('selector', ''),
+                            target_page=target_page,
+                            frame_url=frame_url,
+                            display_path=composed_display
+                        ),
                         timeout=10.0
                     )
                     screenshot_success = True
@@ -1411,10 +2069,9 @@ class WebRecorder:
                     robust_selector = event_data.get('robust_selector')
                     if robust_selector:
                         selector_to_use = robust_selector
-                    dom_context = await self.context_capturer.capture_element_context(
-                        self.page, 
-                        selector_to_use
-                    )
+                    # 选择用于上下文捕获的页面：优先事件来源
+                    page_for_context = self._resolve_event_page(event_data)
+                    dom_context = await self.context_capturer.capture_element_context(page_for_context, selector_to_use)
                 else:
                     console.print("⚠️  context_capturer未初始化")
                     
@@ -1422,20 +2079,48 @@ class WebRecorder:
                 console.print(f"⚠️  DOM上下文捕获失败: {e}")
                 console.print(f"⚠️  错误类型: {type(e).__name__}")
                 dom_context = {'error': str(e), 'selector': event_data.get('selector', '')}
+
+            # 规范化DOM上下文的文本与HTML，压缩空白
+            try:
+                dom_context = self._normalize_dom_context(dom_context)
+            except Exception as _norm_err:
+                console.print(f"⚠️  DOM上下文规范化失败: {_norm_err}")
             
             # 安全地获取页面信息
             page_url = 'unknown'
             viewport = {'width': 1280, 'height': 720}
             
             try:
-                if self.page:
-                    page_url = self.page.url
-                    viewport_size = self.page.viewport_size
+                page_for_info = self._resolve_event_page(event_data)
+                if page_for_info:
+                    page_url = page_for_info.url
+                    viewport_size = page_for_info.viewport_size
                     if viewport_size:
                         viewport = viewport_size
             except Exception as e:
                 console.print(f"⚠️  获取页面信息失败: {e}")
                 console.print(f"⚠️  页面对象类型: {type(self.page)}")
+            
+            # 规范化：去除dom_context中的重复xpath，仅在operation级别保存
+            try:
+                inner_xpath_value = (
+                    (event_data.get('xpath') if isinstance(event_data, dict) else None)
+                    or (dom_context.get('xpath') if isinstance(dom_context, dict) else None)
+                )
+            except Exception:
+                inner_xpath_value = (event_data.get('xpath') if isinstance(event_data, dict) else None)
+            try:
+                if isinstance(dom_context, dict) and 'xpath' in dom_context:
+                    dom_context = dict(dom_context)
+                    dom_context.pop('xpath', None)
+            except Exception:
+                pass
+
+            # 规范化文本内容
+            try:
+                normalized_text = self._normalize_text(event_data.get('text_content', '')) if isinstance(event_data, dict) else ''
+            except Exception:
+                normalized_text = event_data.get('text_content', '') if isinstance(event_data, dict) else ''
             
             operation = {
                 'step_id': step_id,
@@ -1443,12 +2128,51 @@ class WebRecorder:
                 'action': action,
                 'selector': event_data.get('selector', ''),
                 'value': event_data.get('value', ''),
-                'text_content': event_data.get('text_content', ''),
+                'text_content': normalized_text,
                 'screenshot': screenshot_path,
                 'dom_context': dom_context,
+                # 下面的xpath会被替换为跨iframe组合路径，inner_xpath保存原始（frame内）xpath
+                'xpath': None,
+                'inner_xpath': inner_xpath_value,
+                # 不长期保留frame_trace，避免冗余与跨域泄露；仅保留点击发生时的frame URL
+                'click_frame_url': (event_data.get('frame_url') if isinstance(event_data, dict) else None) or (dom_context.get('frame_url') if isinstance(dom_context, dict) else None),
                 'page_url': page_url,
                 'viewport': viewport
             }
+
+            # 生成跨iframe的组合XPath（从最外层到目标元素）
+            try:
+                # 不在operation中保留frame_trace，临时使用事件中的frame_trace用于更丰富的显示；
+                # 没有时也能回退到 PAGE/URL(inner) 的基本结构。
+                temp_frame_trace = event_data.get('frame_trace') if isinstance(event_data, dict) else None
+                operation['xpath'] = self._compose_cross_frame_xpath(
+                    temp_frame_trace,
+                    operation.get('inner_xpath'),
+                    operation.get('page_url')
+                )
+                console.print(f"🧭 组合跨iframe XPath: {operation['xpath']}")
+            except Exception as compose_err:
+                console.print(f"⚠️  组合跨iframe XPath失败: {compose_err}")
+                # 回退为inner_xpath
+                operation['xpath'] = operation.get('inner_xpath')
+
+            # 使用Playwright在父文档中精确计算iframe元素的XPath链，纠正占位符//iframe[n]
+            try:
+                if operation.get('click_frame_url') and target_page:
+                    py_chain = await self._compute_frame_chain_via_playwright(target_page, operation['click_frame_url'])
+                    if py_chain:
+                        # 重建显示路径
+                        segments: List[str] = []
+                        if operation.get('page_url'):
+                            segments.append(f"PAGE:{operation['page_url']}")
+                        segments.extend(py_chain)
+                        segments.append(f"URL:{operation['click_frame_url']}")
+                        if operation.get('inner_xpath'):
+                            segments.append(operation['inner_xpath'])
+                        operation['xpath'] = ' -> '.join(segments)
+                        console.print(f"🧮 以Playwright精确计算的iframe链: {py_chain}")
+            except Exception as py_chain_err:
+                console.print(f"⚠️  Playwright计算iframe链失败: {py_chain_err}")
             
             self.operations.append(operation)
             console.print(f"✅ 操作记录完成 {step_id}: {action} - {event_data.get('selector', 'N/A')}")
@@ -1588,7 +2312,7 @@ class WebRecorder:
                 'url': url,
                 'title': page_title,
                 'browser': 'chromium',
-                'viewport': {'width': 1920, 'height': 1080}
+                'viewport': {"width": 960, "height": 580}
             },
             'statistics': {
                 'total_operations': len(self.operations),
@@ -1784,7 +2508,7 @@ class WebRecorder:
                 'title': self.cached_page_title or 'Unknown'
             })
 
-    async def _take_highlighted_screenshot(self, screenshot_path: Path, selector: str):
+    async def _take_highlighted_screenshot(self, screenshot_path: Path, selector: str, target_page: Optional[Page] = None, frame_url: Optional[str] = None, display_path: Optional[str] = None):
         """高亮截图功能"""
         console.print(f"📸 开始高亮截图: selector='{selector}'")
         console.print(f"📁 截图将保存到: {screenshot_path}")
@@ -1797,23 +2521,62 @@ class WebRecorder:
         try:
             async with self._screenshot_lock:
                 console.print(f"🔒 获取截图锁，开始处理: {selector}")
+                page_obj = target_page or self.page
+                if not page_obj:
+                    raise Exception("截图页面不存在")
+                
+                # 选择执行上下文：若提供frame_url，则在该frame内执行高亮与检测
+                eval_target = page_obj
+                try:
+                    if frame_url:
+                        best = None
+                        # 先精确匹配
+                        for fr in getattr(page_obj, 'frames', []):
+                            try:
+                                if getattr(fr, 'url', None) == frame_url:
+                                    best = fr
+                                    break
+                            except Exception:
+                                continue
+                        # 退化为包含匹配（同源或前缀）
+                        if not best:
+                            for fr in getattr(page_obj, 'frames', []):
+                                try:
+                                    furl = getattr(fr, 'url', '')
+                                    if furl and (frame_url in furl or furl in frame_url):
+                                        best = fr
+                                        break
+                                except Exception:
+                                    continue
+                        if best:
+                            eval_target = best
+                except Exception:
+                    pass
                 if selector:
                     console.print(f"🎯 查找目标元素: {selector}")
                     # 检查页面状态和元素（更快的超时，更好的错误处理）
                     try:
                         # 首先快速检查页面是否还可访问
                         page_ready = await asyncio.wait_for(
-                            self.page.evaluate("() => document.readyState"), 
+                            eval_target.evaluate("() => document.readyState"), 
                             timeout=0.3  # 300ms快速检查
                         )
                         console.print(f"📊 页面状态: {page_ready}")
                         
                         # 如果页面可访问，再检查元素
                         element_exists = await asyncio.wait_for(
-                            self.page.evaluate(f"""
+                            eval_target.evaluate(f"""
                         () => {{
-                        const selector = '{selector}';
-                        const element = document.querySelector(selector);
+                        const sel = '{selector}'.trim();
+                        let element = null;
+                        if (sel.startsWith('//')) {{
+                            try {{
+                                const snap = document.evaluate(sel, document, null, XPathResult.FIRST_ORDERED_NODE_TYPE, null);
+                                element = snap.singleNodeValue || null;
+                            }} catch (_e) {{ element = null; }}
+                        }} else {{
+                            element = document.querySelector(sel);
+                        }}
                         return element ? {{
                             exists: true,
                             tagName: element.tagName,
@@ -1837,10 +2600,19 @@ class WebRecorder:
                     console.print("✨ 添加高亮效果和元素信息...")
                     # 高亮目标元素并添加信息标签（添加超时）
                     try:
-                        await asyncio.wait_for(self.page.evaluate(f"""
+                        await asyncio.wait_for(eval_target.evaluate(f"""
                         () => {{
-                            const selector = '{selector}';
-                            const element = document.querySelector(selector);
+                            const sel = '{selector}'.trim();
+                            const frameDisplay = {json.dumps(display_path) if display_path is not None else 'null'};
+                            let element = null;
+                            if (sel.startsWith('//')) {{
+                                try {{
+                                    const snap = document.evaluate(sel, document, null, XPathResult.FIRST_ORDERED_NODE_TYPE, null);
+                                    element = snap.singleNodeValue || null;
+                                }} catch (_e) {{ element = null; }}
+                            }} else {{
+                                element = document.querySelector(sel);
+                            }}
                             if (element) {{
                                 // 添加高亮样式
                                 element.style.outline = '3px solid #ff4444';
@@ -1866,7 +2638,7 @@ class WebRecorder:
                                     font-family: monospace;
                                     font-size: 12px;
                                     line-height: 1.4;
-                                    z-index: 99999;
+                                    z-index: 2147483647;
                                     max-width: 400px;
                                     box-shadow: 0 4px 20px rgba(0,0,0,0.3);
                                     border: 2px solid #ff4444;
@@ -1901,11 +2673,35 @@ class WebRecorder:
                                 }}
                                 
                                 infoContent += `
-                                    <div style="margin-top: 8px; color: #ffff66;">选择器: ${{selector}}</div>
+                                    <div style="margin-top: 8px; color: #ffff66;">选择器: ${{sel}}</div>
                                 `;
+                                if (frameDisplay) {{
+                                    try {{
+                                        infoContent += `<div style=\"margin-top:6px; color:#ffd27f;\">FramePath: ${{frameDisplay}}</div>`;
+                                    }} catch (_) {{}}
+                                }}
                                 
                                 infoBox.innerHTML = infoContent;
                                 document.body.appendChild(infoBox);
+                                // 固定默认位置：右上角；若与元素重叠则智能避让
+                                try {{
+                                    const rect = element.getBoundingClientRect();
+                                    const infoRect = infoBox.getBoundingClientRect();
+                                    const defaultLeft = window.innerWidth - infoRect.width - 10;
+                                    const defaultTop = 10;
+                                    infoBox.style.left = defaultLeft + 'px';
+                                    infoBox.style.top = defaultTop + 'px';
+                                    const overlaps = !(rect.right < defaultLeft || rect.left > window.innerWidth - 10 || rect.bottom < defaultTop || rect.top > defaultTop + infoRect.height);
+                                    if (overlaps) {{
+                                        let newTop;
+                                        if (rect.height < 500) {{
+                                            newTop = Math.min(rect.bottom + 12, window.innerHeight - infoRect.height - 10);
+                                        }} else {{
+                                            newTop = Math.max(10, rect.top + 10);
+                                        }}
+                                        infoBox.style.top = newTop + 'px';
+                                    }}
+                                }} catch (_) {{}}
                             }}
                         }}
                     """), timeout=1.0)  # 1秒超时
@@ -1915,14 +2711,139 @@ class WebRecorder:
                     except Exception as highlight_error:
                         console.print(f"❌ 高亮效果添加失败: {highlight_error}")
                     
+                    # 仅保留顶层信息框：移除frame内信息框
+                    try:
+                        await eval_target.evaluate("""
+                            () => { try { const ib = document.getElementById('webautomation-info-box'); if (ib) ib.remove(); } catch(_) {} }
+                        """)
+                    except Exception:
+                        pass
+                    
+                    # 计算frame内元素矩形
+                    element_rect = None
+                    try:
+                        element_rect = await eval_target.evaluate(f"""
+                            (sel) => {{
+                                try {{
+                                    const s = (sel || '').trim();
+                                    let el = null;
+                                    if (s.startsWith('//')) {{
+                                        try {{ const snap = document.evaluate(s, document, null, XPathResult.FIRST_ORDERED_NODE_TYPE, null); el = snap.singleNodeValue || null; }} catch(_) {{}}
+                                    }} else {{
+                                        el = document.querySelector(s);
+                                    }}
+                                    if (!el) return null;
+                                    const r = el.getBoundingClientRect();
+                                    return {{ left: r.left, top: r.top, width: r.width, height: r.height }};
+                                }} catch(_) {{ return null; }}
+                            }}
+                        """, selector)
+                    except Exception:
+                        element_rect = None
+                    
+                    # 折算为全局矩形
+                    global_rect = None
+                    try:
+                        if element_rect:
+                            if frame_url:
+                                iframe_rect = await page_obj.evaluate("""
+                                    (u) => { try { const frames = Array.from(document.querySelectorAll('iframe,frame')); for (const f of frames) { const s = f.src || ''; if (s === u || s.indexOf(u) !== -1 || u.indexOf(s) !== -1) { const r = f.getBoundingClientRect(); return { left: r.left, top: r.top, width: r.width, height: r.height }; } } } catch(_) {} return null; }
+                                """, frame_url)
+                                if iframe_rect:
+                                    global_rect = {
+                                        'left': iframe_rect.get('left', 0) + element_rect.get('left', 0),
+                                        'top': iframe_rect.get('top', 0) + element_rect.get('top', 0),
+                                        'width': element_rect.get('width', 0),
+                                        'height': element_rect.get('height', 0)
+                                    }
+                            else:
+                                global_rect = element_rect
+                    except Exception:
+                        global_rect = None
+                    
+                    # 顶层信息框：固定右上，重叠则避让并clamp（包含元素详情+FramePath），截图后自动清理
+                    try:
+                        # 收集元素详情
+                        element_details = None
+                        try:
+                            element_details = await eval_target.evaluate(f"""
+                                (sel) => {{
+                                    try {{
+                                        const s = (sel || '').trim();
+                                        let el = null;
+                                        if (s.startsWith('//')) {{
+                                            try {{ const snap = document.evaluate(s, document, null, XPathResult.FIRST_ORDERED_NODE_TYPE, null); el = snap.singleNodeValue || null; }} catch(_) {{}}
+                                        }} else {{
+                                            el = document.querySelector(s);
+                                        }}
+                                        if (!el) return null;
+                                        const txt = (el.textContent || '').trim().substring(0, 80);
+                                        return {{ tagName: (el.tagName||'').toLowerCase(), id: el.id||'', className: (el.className||'').toString(), elementType: el.type||'', name: el.name||'', text: txt }};
+                                    }} catch(_) {{ return null; }}
+                                }}
+                            """, selector)
+                        except Exception:
+                            element_details = None
+
+                        await asyncio.wait_for(page_obj.evaluate("""
+                            (data) => {
+                                try {
+                                    const display = data && data.display;
+                                    const rect = data && data.rect;
+                                    const details = data && data.details;
+                                    let box = document.getElementById('webautomation-top-info-box');
+                                    if (!box) {
+                                        box = document.createElement('div');
+                                        box.id = 'webautomation-top-info-box';
+                                        box.style.cssText = 'position:fixed; top:10px; right:10px; background:rgba(0,0,0,0.9); color:#fff; padding:12px; border-radius:8px; font-family:monospace; font-size:12px; line-height:1.4; z-index:2147483647; max-width:520px; box-shadow:0 4px 20px rgba(0,0,0,0.3); border:2px solid #ff4444; pointer-events:none;';
+                                        (document.body || document.documentElement).appendChild(box);
+                                    }
+                                    const lines = [];
+                                    lines.push('<div style="color:#ff6666;font-weight:bold;margin-bottom:8px;">🎯 元素信息</div>');
+                                    if (details) {
+                                        if (details.tagName) lines.push('<div><span style="color:#66ff66;">标签:</span> &lt;'+details.tagName+'&gt;</div>');
+                                        if (details.id) lines.push('<div><span style="color:#66ff66;">ID:</span> '+details.id+'</div>');
+                                        if (details.className) lines.push('<div><span style="color:#66ff66;">Class:</span> '+details.className+'</div>');
+                                        if (details.elementType) lines.push('<div><span style="color:#66ff66;">Type:</span> '+details.elementType+'</div>');
+                                        if (details.name) lines.push('<div><span style="color:#66ff66;">Name:</span> '+details.name+'</div>');
+                                        if (details.text) lines.push('<div><span style="color:#66ff66;">Text:</span> '+details.text+'</div>');
+                                    }
+                                    if (display) {
+                                        lines.push('<div style="margin-top:8px; color:#ffffff; white-space:pre-wrap; word-break:break-all; font-size:13px;">'+String(display).replace(/</g,'&lt;').replace(/>/g,'&gt;')+'</div>');
+                                    }
+                                    box.innerHTML = lines.join('');
+                                    const b = box.getBoundingClientRect();
+                                    const defLeft = window.innerWidth - b.width - 10;
+                                    let top = 10;
+                                    try {
+                                        if (rect) {
+                                            const overlaps = !(rect.left + rect.width < defLeft || rect.left > window.innerWidth - 10 || rect.top + rect.height < top || rect.top > top + b.height);
+                                            if (overlaps) {
+                                                if (rect.height < 500) {
+                                                    top = Math.min(rect.top + rect.height + 12, window.innerHeight - b.height - 10);
+                                                } else {
+                                                    top = Math.max(10, rect.top + 10);
+                                                }
+                                            }
+                                        }
+                                    } catch(_) {}
+                                    top = Math.max(10, Math.min(top, window.innerHeight - b.height - 10));
+                                    box.style.left = defLeft + 'px';
+                                    box.style.top = top + 'px';
+                                } catch(_) {}
+                            }
+                        """, { 'display': (display_path or ''), 'rect': (global_rect or None), 'details': (element_details or None) }), timeout=0.8)
+                    except Exception:
+                        pass
+                    
                     console.print("⏱️  等待高亮效果...")
-                    await asyncio.sleep(0.5)  # 等待高亮效果和滚动完成
+                    await asyncio.sleep(0.7)  # 等待高亮效果和滚动完成（+0.2s 稳态）
                 
                 console.print(f"📷 开始截图到: {screenshot_path}")
                 # 截图（添加超时）
                 try:
                     await asyncio.wait_for(
-                        self.page.screenshot(path=str(screenshot_path)), 
+                        page_obj.screenshot(path=str(screenshot_path)), 
                         timeout=3
                     )
                     screenshot_completed = True  # 标记截图成功完成
@@ -1940,10 +2861,18 @@ class WebRecorder:
                     console.print("🧹 清理高亮效果和信息框...")
                     # 移除高亮和信息框（添加超时）
                     try:
-                        await asyncio.wait_for(self.page.evaluate(f"""
+                        await asyncio.wait_for(eval_target.evaluate(f"""
                             () => {{
-                                const selector = '{selector}';
-                                const element = document.querySelector(selector);
+                                const sel = '{selector}'.trim();
+                                let element = null;
+                                if (sel.startsWith('//')) {{
+                                    try {{
+                                        const snap = document.evaluate(sel, document, null, XPathResult.FIRST_ORDERED_NODE_TYPE, null);
+                                        element = snap.singleNodeValue || null;
+                                    }} catch (_e) {{ element = null; }}
+                                }} else {{
+                                    element = document.querySelector(sel);
+                                }}
                                 if (element) {{
                                     element.style.outline = '';
                                     element.style.outlineOffset = '';
@@ -1952,11 +2881,8 @@ class WebRecorder:
                                     element.style.zIndex = '';
                                 }}
                                 
-                                // 删除信息提示框
-                                const infoBox = document.getElementById('webautomation-info-box');
-                                if (infoBox) {{
-                                    infoBox.remove();
-                                }}
+                                // 删除信息提示框（frame内）
+                                try {{ const infoBox = document.getElementById('webautomation-info-box'); if (infoBox) infoBox.remove(); }} catch(_) {{}}
                             }}
                         """), timeout=1.0)  # 1秒超时
                         console.print("✅ 高亮效果清理成功")
@@ -1964,12 +2890,19 @@ class WebRecorder:
                         console.print(f"⏰ 高亮效果清理超时: {selector}")
                     except Exception as cleanup_error:
                         console.print(f"❌ 高亮效果清理失败: {cleanup_error}")
+                    # 清理顶层提示框
+                    try:
+                        await page_obj.evaluate("""
+                            () => { try { const t = document.getElementById('webautomation-top-info-box'); if (t) t.remove(); } catch(_) {} }
+                        """)
+                    except Exception:
+                        pass
                 else:
                     console.print("📷 无选择器，使用普通截图")
                     # 没有选择器时使用普通截图（添加超时）
                     try:
                         await asyncio.wait_for(
-                            self.page.screenshot(path=str(screenshot_path)),
+                            page_obj.screenshot(path=str(screenshot_path)),
                             timeout=3
                         )
                         console.print("✅ 普通截图完成")
@@ -1991,11 +2924,15 @@ class WebRecorder:
             # 失败时使用普通截图
             try:
                 console.print("🔄 尝试普通截图作为备用方案...")
-                await self.page.screenshot(path=str(screenshot_path))
+                await page_obj.screenshot(path=str(screenshot_path))
                 console.print("✅ 备用截图成功")
             except Exception as e2:
                 console.print(f"❌ 备用截图也失败: {e2}")
-                console.print(f"❌ 页面状态: url={self.page.url if self.page else 'None'}")
+                try:
+                    page_url_dbg = page_obj.url if page_obj else 'None'
+                except Exception:
+                    page_url_dbg = 'unknown'
+                console.print(f"❌ 页面状态: url={page_url_dbg}")
                 console.print(f"❌ 截图路径: {screenshot_path}")
                 console.print(f"📝 所有截图方案都失败，但继续记录操作")
                 # 不再抛出异常，让操作记录继续
@@ -2020,6 +2957,12 @@ class WebRecorder:
         html_dir.mkdir(exist_ok=True)
         
         console.print(f"💾 正在保存 {len(self.html_cache)} 个URL的HTML快照...")
+        
+        # 在保存前尽可能收集当前页面所有frame的HTML，以便内联
+        try:
+            await self._collect_iframe_snapshots_if_possible()
+        except Exception as e:
+            console.print(f"⚠️  收集iframe HTML失败: {e}")
         
         # 并发写入HTML文件
         write_tasks = []
@@ -2056,6 +2999,43 @@ class WebRecorder:
             # 清理HTML，只保留选择器定位需要的内容
             cleaned_html = self._clean_html_for_storage(html_data['html'])
             
+            # 将已捕获的iframe内容尽可能内联到顶层HTML中（使用srcdoc）
+            try:
+                from bs4 import BeautifulSoup
+                from urllib.parse import urljoin
+                soup = BeautifulSoup(cleaned_html, 'html.parser')
+                inlined_count = 0
+                for iframe in soup.find_all('iframe'):
+                    try:
+                        src = iframe.get('src') or ''
+                        if not src:
+                            continue
+                        resolved = urljoin(url, src)
+                        iframe_cache = self.html_cache.get(resolved)
+                        if not iframe_cache:
+                            # 有些站点iframe src带hash变化，尝试去掉hash匹配
+                            try:
+                                base = resolved.split('#')[0]
+                                iframe_cache = self.html_cache.get(base)
+                            except Exception:
+                                iframe_cache = None
+                        if iframe_cache:
+                            iframe_cleaned = self._clean_html_for_storage(iframe_cache.get('html', ''))
+                            # 设置为srcdoc并移除src，避免离线加载
+                            iframe['srcdoc'] = f"<!DOCTYPE html>\n{iframe_cleaned}"
+                            if 'src' in iframe.attrs:
+                                del iframe['src']
+                            iframe['data-inlined'] = '1'
+                            iframe['data-original-url'] = resolved
+                            inlined_count += 1
+                    except Exception:
+                        continue
+                if inlined_count > 0:
+                    cleaned_html = str(soup)
+                    console.print(f"✅ 已内联 {inlined_count} 个iframe: {url}")
+            except Exception as e:
+                console.print(f"⚠️  内联iframe时失败: {e}")
+            
             # 计算清理后的大小
             cleaned_size_kb = len(cleaned_html.encode()) // 1024
             original_size_kb = html_data.get('size_kb', 0)
@@ -2087,6 +3067,43 @@ URL: {url}
         except Exception as e:
             console.print(f"⚠️  写入HTML文件失败 {html_file}: {e}")
 
+    async def _collect_iframe_snapshots_if_possible(self):
+        """尽可能收集当前页面及其子frame的HTML，填充到html_cache，供后续内联使用"""
+        try:
+            if not self.page:
+                return
+            from datetime import datetime as dt
+            timestamp = dt.now().isoformat()
+            tasks = []
+            frames = []
+            try:
+                frames = list(self.page.frames)
+            except Exception:
+                frames = []
+            for fr in frames:
+                try:
+                    # 跳过主frame，主frame内容已通过page.content捕获
+                    if self.page.main_frame and fr == self.page.main_frame:
+                        continue
+                except Exception:
+                    pass
+                async def _capture(fr_ref):
+                    try:
+                        f_url = getattr(fr_ref, 'url', '')
+                        if not f_url:
+                            return
+                        f_html = await fr_ref.content()
+                        c_hash = hashlib.md5(f_html.encode()).hexdigest()
+                        # 更新缓存
+                        self._update_html_cache(f_url, f_html, timestamp, c_hash)
+                    except Exception:
+                        return
+                tasks.append(_capture(fr))
+            if tasks:
+                await asyncio.gather(*tasks, return_exceptions=True)
+        except Exception as e:
+            console.print(f"⚠️  收集iframe快照异常: {e}")
+ 
     def _clean_html_for_storage(self, html: str) -> str:
         """使用BeautifulSoup清理HTML，只保留选择器定位需要的内容"""
         try:
@@ -2171,7 +3188,7 @@ URL: {url}
             console.print(f"✅ BeautifulSoup HTML清理完成")
             console.print(f"📊 原始大小: {original_size_kb} KB → 清理后: {cleaned_size_kb} KB (压缩率: {compression_ratio}%)")
             
-            return cleaned_html.strip()
+            return cleaned_html.strip().replace("&lt;", "<").replace("&gt;", ">")
             
         except Exception as e:
             console.print(f"⚠️  BeautifulSoup HTML清理失败: {e}")
@@ -2233,13 +3250,14 @@ URL: {url}
             # URL解析失败时使用简单格式
             return f"{index:03d}_unknown_url"
 
-    async def _take_selected_element_screenshot(self, element_data: Dict):
-        """拍摄选中元素的高亮截图"""
+    async def _take_selected_element_screenshot(self, element_data: Dict, target_page: Optional[Page] = None):
+        """拍摄选中元素的高亮截图（支持指定页面）。"""
         try:
             console.print(f"🎯 开始拍摄选中元素截图 - 数据: {element_data}")
             
             # 检查页面状态
-            if not self.page:
+            page_obj = target_page or self.page
+            if not page_obj:
                 raise Exception("页面对象不存在")
             
             # 检查会话ID
@@ -2255,18 +3273,279 @@ URL: {url}
             
             # 验证页面仍然活跃
             try:
-                current_url = self.page.url
+                current_url = page_obj.url
                 console.print(f"🌐 当前页面URL: {current_url}")
             except Exception as e:
                 console.print(f"⚠️  无法获取页面URL: {e}")
                 raise Exception(f"页面可能已关闭: {e}")
             
+            # 选择执行上下文：若元素来自特定frame，则在该frame内执行高亮
+            frame_url = None
+            try:
+                if isinstance(element_data, dict):
+                    frame_url = (
+                        (element_data.get('element_snapshot') or {}).get('page_url')
+                        or element_data.get('frame_url')
+                        or element_data.get('page_url')
+                    )
+            except Exception:
+                frame_url = None
+
+            eval_target = page_obj
+            try:
+                if frame_url:
+                    best = None
+                    # 精确匹配
+                    for fr in getattr(page_obj, 'frames', []):
+                        try:
+                            if getattr(fr, 'url', None) == frame_url:
+                                best = fr
+                                break
+                        except Exception:
+                            continue
+                    # 包含匹配
+                    if not best:
+                        for fr in getattr(page_obj, 'frames', []):
+                            try:
+                                furl = getattr(fr, 'url', '')
+                                if furl and (frame_url in furl or furl in frame_url):
+                                    best = fr
+                                    break
+                            except Exception:
+                                continue
+                    if best:
+                        eval_target = best
+            except Exception:
+                pass
+
+            # 优先方案：计算全局坐标并在顶层页面绘制固定矩形，避免框偏移
+            try:
+                bbox = None
+                try:
+                    xp = element_data.get('xpath')
+                except Exception:
+                    xp = None
+                # 先用XPath
+                try:
+                    if xp:
+                        locator = eval_target.locator(f"xpath={xp}")
+                        try:
+                            await locator.scroll_into_view_if_needed()
+                        except Exception:
+                            pass
+                        try:
+                            bbox = await locator.bounding_box()
+                        except Exception:
+                            bbox = None
+                except Exception:
+                    bbox = None
+                # 再用CSS选择器
+                try:
+                    if (not bbox) and selector:
+                        css_locator = eval_target.locator(selector)
+                        try:
+                            await css_locator.scroll_into_view_if_needed()
+                        except Exception:
+                            pass
+                        try:
+                            bbox = await css_locator.bounding_box()
+                        except Exception:
+                            bbox = None
+                except Exception:
+                    pass
+
+                if bbox and bbox.get('width', 0) >= 1 and bbox.get('height', 0) >= 1:
+                    console.print(f"📐 计算到全局矩形: {bbox}")
+                    # 组合跨iframe显示路径（与事件触发一致）
+                    try:
+                        top_url_for_display = None
+                        try:
+                            top_url_for_display = page_obj.url
+                        except Exception:
+                            top_url_for_display = None
+                        inner_xpath_display = element_data.get('xpath')
+                        segments = []
+                        if top_url_for_display:
+                            segments.append(f"PAGE:{top_url_for_display}")
+                        py_chain = []
+                        try:
+                            if frame_url:
+                                py_chain = await self._compute_frame_chain_via_playwright(page_obj, frame_url)
+                        except Exception:
+                            py_chain = []
+                        if py_chain:
+                            segments.extend(py_chain)
+                        if frame_url:
+                            segments.append(f"URL:{frame_url}")
+                        if inner_xpath_display:
+                            segments.append(inner_xpath_display)
+                        composed_display_sel = ' -> '.join(segments) if segments else (inner_xpath_display or '')
+                    except Exception:
+                        composed_display_sel = element_data.get('xpath')
+
+                    # 组装元素详情（用于顶层信息框展示，保证与iframe路径一致的字段）
+                    top_details = None
+                    try:
+                        top_details = await eval_target.evaluate(f"""
+                            (sel) => {{
+                                try {{
+                                    const s = (sel || '').trim();
+                                    let el = null;
+                                    if (s.startsWith('//')) {{
+                                        try {{ const snap = document.evaluate(s, document, null, XPathResult.FIRST_ORDERED_NODE_TYPE, null); el = snap.singleNodeValue || null; }} catch(_) {{}}
+                                    }} else {{
+                                        el = document.querySelector(s);
+                                    }}
+                                    if (!el) return null;
+                                    const txt = (el.textContent || '').trim().substring(0, 80);
+                                    return {{ tagName: (el.tagName||'').toLowerCase(), id: el.id||'', className: (el.className||'').toString(), elementType: el.type||'', name: el.name||'', text: txt }};
+                                }} catch(_) {{ return null; }}
+                            }}
+                        """, selector)
+                    except Exception:
+                        top_details = None
+
+                    # Python侧兜底：直接用element_data构造摘要，避免d为空
+                    try:
+                        fallback_details = {
+                            'tagName': str((element_data.get('tagName') or '')).lower(),
+                            'id': element_data.get('id') or '',
+                            'className': element_data.get('className') or '',
+                            'elementType': element_data.get('elementType') or '',
+                            'name': element_data.get('name') or '',
+                            'text': (element_data.get('textContent') or '')[:80]
+                        }
+                    except Exception:
+                        fallback_details = None
+                    details_to_send = top_details or fallback_details
+
+                    # 在顶层页面绘制固定矩形与信息框
+                    await page_obj.evaluate("""
+                        (data) => {
+                            const rect = data && data.rect;
+                            if (!rect) return;
+                            let box = document.getElementById('webautomation-global-selected-rect');
+                            if (!box) {
+                                box = document.createElement('div');
+                                box.id = 'webautomation-global-selected-rect';
+                                box.style.cssText = 'position:fixed; border:4px solid #1e90ff; background:rgba(30,144,255,0.10); box-shadow:0 0 22px rgba(30,144,255,0.60); z-index:2147483647; pointer-events:none;';
+                                (document.body || document.documentElement).appendChild(box);
+                            }
+                            box.style.left = rect.x + 'px';
+                            box.style.top = rect.y + 'px';
+                            box.style.width = rect.width + 'px';
+                            box.style.height = rect.height + 'px';
+
+                            let info = document.getElementById('webautomation-global-selected-info');
+                            if (!info) {
+                                info = document.createElement('div');
+                                info.id = 'webautomation-global-selected-info';
+                                info.style.cssText = 'position:fixed; bottom:20px; right:20px; background:rgba(30,144,255,0.95); color:#f7fbff; padding:12px 14px; border-radius:10px; font-family:monospace; font-size:12px; z-index:2147483647; box-shadow:0 4px 25px rgba(0,0,0,0.3); border:3px solid #1e90ff; pointer-events:none;';
+                                (document.body || document.documentElement).appendChild(info);
+                            }
+                            const sel = data.selector || '';
+                            const xp = data.xpath || '';
+                            const fp = data.frame_display || '';
+                            const d = data.details || null;
+                            const parts = [];
+                            parts.push('<div style="color:#e6f4ff;font-weight:bold;margin-bottom:8px;font-size:16px;">✅ 已选中返回内容区域</div>');
+                            if (d) {
+                                if (d.tagName) parts.push('<div style="color:#ffffff;font-size:16px;"><span>标签:</span> &lt;'+d.tagName+'&gt;</div>');
+                                if (d.id) parts.push('<div style="color:#ffffff;font-size:16px;"><span>ID:</span> '+d.id+'</div>');
+                                if (d.className) parts.push('<div style="color:#ffffff;font-size:16px;"><span>Class:</span> '+d.className+'</div>');
+                                if (d.elementType) parts.push('<div style="color:#ffffff;font-size:16px;"><span>Type:</span> '+d.elementType+'</div>');
+                                if (d.name) parts.push('<div style="color:#ffffff;font-size:16px;"><span>Name:</span> '+d.name+'</div>');
+                                if (d.text) parts.push('<div><span style="color:#ffffff;font-size:14px;">Text:</span> '+d.text+'</div>');
+                            }
+                            parts.push('<div style="margin-top: 8px; padding-top: 6px; border-top: 1px solid rgba(255,255,255,0.3);">');
+                            parts.push('<div style="color:#ffffff; font-size: 14px;">选择器: ' + sel + '</div>');
+                            if (fp || xp) parts.push('<div style="color:#ffffff; font-size: 14px; margin-top:4px;">XPath: ' + (fp || xp) + '</div>');
+                            parts.push('</div>');
+                            info.innerHTML = parts.join('');
+
+                            // 选中区域旁边的小标签，直接显示 TAG/ID/Class 摘要
+                            try {
+                                const summary = (function(){
+                                    if (!d) return '';
+                                    const tag = d.tagName ? d.tagName : '';
+                                    const idtxt = d.id ? ('#'+d.id) : '';
+                                    const cls = d.className ? ('.'+String(d.className).trim().split(/\s+/).slice(0,2).join('.')) : '';
+                                    return (tag + idtxt + cls).slice(0,80);
+                                })();
+                                let lab = document.getElementById('webautomation-global-selected-label');
+                                if (!lab) {
+                                    lab = document.createElement('div');
+                                    lab.id = 'webautomation-global-selected-label';
+                                    lab.style.cssText = 'position:fixed; padding:4px 6px; background:rgba(30,144,255,0.95); color:#fff; border:2px solid #1e90ff; border-radius:6px; font-family:monospace; font-size:11px; z-index:2147483647; pointer-events:none;';
+                                    (document.body || document.documentElement).appendChild(lab);
+                                }
+                                lab.textContent = summary;
+                                const labTop = Math.max(10, rect.y - 22);
+                                lab.style.left = rect.x + 'px';
+                                lab.style.top = labTop + 'px';
+                            } catch (_) {}
+                        }
+                    """, { 'rect': bbox, 'selector': selector, 'xpath': element_data.get('xpath'), 'frame_display': composed_display_sel, 'details': details_to_send })
+
+                    # 短暂等待确保绘制（由0.3s提升至0.5s）
+                    await asyncio.sleep(0.5)
+
+                    # 截图
+                    await page_obj.screenshot(path=str(screenshot_path))
+                    console.print(f"✅ 顶层固定矩形截图已保存: {screenshot_path.name}")
+
+                    # 清理
+                    try:
+                        await page_obj.evaluate("""
+                            () => {
+                                const ids = ['webautomation-global-selected-rect','webautomation-global-selected-info'];
+                                ids.forEach(id => { const el = document.getElementById(id); if (el) el.remove(); });
+                                const lbl = document.getElementById('webautomation-global-selected-label'); if (lbl) lbl.remove();
+                            }
+                        """)
+                    except Exception:
+                        pass
+
+                    console.print("✅ 顶层固定矩形清理完成")
+                    return
+                else:
+                    console.print("⚠️ 未能获得有效的全局矩形，将回退到iframe内高亮方案")
+            except Exception as e:
+                console.print(f"⚠️ 顶层固定矩形方案异常，将回退到iframe内高亮: {e}")
+            
             # 重新高亮选中的元素（使用不同的颜色）
             console.print(f"🎨 开始高亮选中元素: {selector}")
-            # 安全地传递选择器，避免JavaScript注入
-            await self.page.evaluate("""
-                (selector) => {
-                    const element = document.querySelector(selector);
+            # 安全地传递选择器与xpath，避免JavaScript注入
+            await eval_target.evaluate("""
+                (params) => {
+                    const selector = params && params.selector;
+                    const xpath = params && params.xpath;
+                    // 若仍有元素选择模式的UI残留，先移除以免遮挡
+                    try {
+                        const ids = ['element-selection-overlay','element-selection-hover-rect','element-selection-notice','element-selection-styles'];
+                        ids.forEach(id => { const el = document.getElementById(id); if (el) el.remove(); });
+                    } catch (_) {}
+
+                    let element = null;
+                    try {
+                        const sel = (selector || '').trim();
+                        if (sel) {
+                            if (sel.startsWith('//')) {
+                                try {
+                                    const snap = document.evaluate(sel, document, null, XPathResult.FIRST_ORDERED_NODE_TYPE, null);
+                                    element = snap.singleNodeValue || null;
+                                } catch (_e) { element = null; }
+                            } else {
+                                element = document.querySelector(sel);
+                            }
+                        }
+                        if (!element && xpath) {
+                            try {
+                                const snap2 = document.evaluate(String(xpath), document, null, XPathResult.FIRST_ORDERED_NODE_TYPE, null);
+                                element = snap2.singleNodeValue || element;
+                            } catch (_e2) {}
+                        }
+                    } catch (_err) { element = null; }
                     if (!element) return;
 
                     // 注入强可见样式（使用!important避免被页面覆盖）
@@ -2276,10 +3555,10 @@ URL: {url}
                         styles.id = stylesId;
                         styles.textContent = `
                             [data-webautomation-force-visible] {
-                                outline: 4px solid #28a745 !important;
+                                outline: 4px solid #1e90ff !important;
                                 outline-offset: 3px !important;
-                                background-color: rgba(40, 167, 69, 0.15) !important;
-                                box-shadow: 0 0 15px rgba(40, 167, 69, 0.6) !important;
+                                background-color: rgba(30, 144, 255, 0.15) !important;
+                                box-shadow: 0 0 15px rgba(30, 144, 255, 0.6) !important;
                                 position: relative !important;
                                 visibility: visible !important;
                                 opacity: 1 !important;
@@ -2300,8 +3579,9 @@ URL: {url}
                                 transform: none !important;
                             }
                             #webautomation-selected-rect {
-                                position: fixed; border: 4px solid #28a745; background: rgba(40,167,69,0.08);
-                                box-shadow: 0 0 20px rgba(40,167,69,0.6); z-index: 2147483647; pointer-events: none;
+                                position: fixed !important; border: 4px solid #1e90ff !important; background: rgba(30,144,255,0.10) !important;
+                                box-shadow: 0 0 20px rgba(30,144,255,0.6) !important; z-index: 2147483647 !important; pointer-events: none !important;
+                                display: block !important;
                             }
                         `;
                         document.head.appendChild(styles);
@@ -2329,11 +3609,11 @@ URL: {url}
                             cloneContainer.id = 'webautomation-selected-clone';
                             cloneContainer.style.cssText = `
                                 position: fixed; top: 20px; right: 20px; max-width: 600px; max-height: 320px; overflow: auto;
-                                background: #fff; color: #111; padding: 10px; border-radius: 8px; z-index: 2147483647;
-                                border: 3px solid #28a745; box-shadow: 0 4px 25px rgba(0,0,0,0.35); font-family: system-ui, sans-serif; font-size: 12px;`;
+                                background: #0b1520; color: #e6f4ff; padding: 10px; border-radius: 8px; z-index: 2147483647;
+                                border: 3px solid #1e90ff; box-shadow: 0 4px 25px rgba(0,0,0,0.35); font-family: system-ui, sans-serif; font-size: 12px;`;
                             const label = document.createElement('div');
                             label.textContent = 'Preview of selected element (cloned)';
-                            label.style.cssText = 'margin-bottom:6px; font-weight:600; color:#28a745;';
+                            label.style.cssText = 'margin-bottom:6px; font-weight:600; color:#8ed0ff;';
                             cloneContainer.appendChild(label);
                             document.body.appendChild(cloneContainer);
                         } else {
@@ -2356,6 +3636,7 @@ URL: {url}
                         rectBox.style.top = rect.top + 'px';
                         rectBox.style.width = rect.width + 'px';
                         rectBox.style.height = rect.height + 'px';
+                        rectBox.style.display = 'block';
                     }
 
                     // 信息框
@@ -2365,8 +3646,8 @@ URL: {url}
                         position: fixed;
                         bottom: 20px;
                         right: 20px;
-                        background: rgba(40, 167, 69, 0.95);
-                        color: white;
+                        background: rgba(30, 144, 255, 0.95);
+                        color: #f7fbff;
                         padding: 12px 14px;
                         border-radius: 10px;
                         font-family: monospace;
@@ -2375,33 +3656,35 @@ URL: {url}
                         z-index: 2147483647;
                         max-width: 460px;
                         box-shadow: 0 4px 25px rgba(0,0,0,0.3);
-                        border: 3px solid #28a745;`;
+                        border: 3px solid #1e90ff;`;
                     const tagName = element.tagName.toLowerCase();
                     const id = element.id || 'N/A';
                     const className = element.className || 'N/A';
                     const textContent = (element.textContent || '').trim().substring(0, 80);
+                    const xpathStr = (typeof window.generateXPath === 'function') ? window.generateXPath(element) : '';
                     infoBox.innerHTML = `
-                        <div style="color:#90ff90;font-weight:bold;margin-bottom:8px;font-size:13px;">✅ 已选中返回内容区域</div>
-                        <div><span style=\"color:#c0ffc0;\">标签:</span> &lt;${tagName}&gt;</div>
-                        <div><span style=\"color:#c0ffc0;\">ID:</span> ${id}</div>
-                        <div><span style=\"color:#c0ffc0;\">Class:</span> ${className}</div>
-                        ${textContent ? `<div><span style=\"color:#c0ffc0;\">Text:</span> ${textContent}${textContent.length === 80 ? '...' : ''}</div>` : ''}
+                        <div style="color:#e6f4ff;font-weight:bold;margin-bottom:8px;font-size:15px;">✅ 已选中返回内容区域</div>
+                        <div><span style=\"color:#ffffff;font-size:14px;\">标签:</span> &lt;${tagName}&gt;</div>
+                        <div><span style=\"color:#ffffff;font-size:14px;\">ID:</span> ${id}</div>
+                        <div><span style=\"color:#ffffff;font-size:14px;\">Class:</span> ${className}</div>
+                        ${textContent ? `<div><span style=\"color:#cde9ff;\">Text:</span> ${textContent}${textContent.length === 80 ? '...' : ''}</div>` : ''}
                         <div style="margin-top: 8px; padding-top: 6px; border-top: 1px solid rgba(255,255,255,0.3);">
-                            <div style="color: #ffff90; font-size: 11px;">选择器: ${selector}</div>
+                            <div style="color:#ffffff; font-size: 14px;">选择器: ${selector}</div>
+                            ${xpathStr ? `<div style=\"color:#ffffff; font-size: 14px; margin-top:4px;\">XPath: ${xpathStr}</div>` : ''}
                         </div>
-                        <div style="margin-top: 6px; font-size: 11px; color: #d0ffd0;">AI将从此区域提取目标数据</div>`;
+                        <div style="margin-top: 6px; font-size: 11px; color: #d6eeff;">AI将从此区域提取目标数据</div>`;
                     document.body.appendChild(infoBox);
                 }
-            """, selector)
+            """, { 'selector': selector, 'xpath': element_data.get('xpath') })
             
-            # 等待高亮效果显示
+            # 等待高亮效果显示（+0.2s 稳态）
             console.print("⏱️  等待高亮效果显示...")
-            await asyncio.sleep(1.0)
+            await asyncio.sleep(1.2)
             console.print("✅ 高亮效果显示完成")
             
             # 截图
             console.print("📷 开始执行页面截图...")
-            await self.page.screenshot(path=str(screenshot_path))
+            await page_obj.screenshot(path=str(screenshot_path))
             console.print(f"✅ 选中元素截图已保存: {screenshot_path.name}")
             
             # 验证截图文件是否真的被创建
@@ -2416,9 +3699,30 @@ URL: {url}
             
             # 清理高亮效果
             console.print("🧹 清理高亮效果...")
-            await self.page.evaluate("""
-                (selector) => {
-                    const element = document.querySelector(selector);
+            await eval_target.evaluate("""
+                (params) => {
+                    const selector = params && params.selector;
+                    const xpath = params && params.xpath;
+                    let element = null;
+                    try {
+                        const sel = (selector || '').trim();
+                        if (sel) {
+                            if (sel.startsWith('//')) {
+                                try {
+                                    const snap = document.evaluate(sel, document, null, XPathResult.FIRST_ORDERED_NODE_TYPE, null);
+                                    element = snap.singleNodeValue || null;
+                                } catch (_e) { element = null; }
+                            } else {
+                                element = document.querySelector(sel);
+                            }
+                        }
+                        if (!element && xpath) {
+                            try {
+                                const snap2 = document.evaluate(String(xpath), document, null, XPathResult.FIRST_ORDERED_NODE_TYPE, null);
+                                element = snap2.singleNodeValue || element;
+                            } catch (_e2) {}
+                        }
+                    } catch (_err) { element = null; }
                     if (element) {
                         element.removeAttribute('data-webautomation-force-visible');
                     }
@@ -2430,8 +3734,13 @@ URL: {url}
                     ids.forEach(id => { const el = document.getElementById(id); if (el) el.remove(); });
                     const styles = document.getElementById('webautomation-force-visible-styles');
                     if (styles) styles.remove();
+                    // 也清理选择模式残留
+                    try {
+                        const oids = ['element-selection-overlay','element-selection-hover-rect','element-selection-notice','element-selection-styles'];
+                        oids.forEach(id => { const el = document.getElementById(id); if (el) el.remove(); });
+                    } catch (_) {}
                 }
-            """, selector)
+            """, { 'selector': selector, 'xpath': element_data.get('xpath') })
             console.print("✅ 高亮效果清理完成")
             
             console.print("🎯 选中元素截图函数执行完毕")
@@ -2447,6 +3756,19 @@ URL: {url}
         if not self.selected_element:
             return None
         
+        # 组合跨iframe XPath
+        try:
+            inner_xpath = self.selected_element.get('xpath')
+            cross_xpath = self._compose_cross_frame_xpath(None, inner_xpath)
+        except Exception:
+            cross_xpath = self.selected_element.get('xpath')
+            inner_xpath = self.selected_element.get('xpath')
+        
+        try:
+            preview_text = self._normalize_text(self.selected_element.get('textContent', ''))
+        except Exception:
+            preview_text = (self.selected_element.get('textContent', '') or '')
+        
         return {
             'description': '用户选择的包含目标内容的元素区域',
             'selector': self.selected_element.get('selector', ''),
@@ -2455,12 +3777,231 @@ URL: {url}
                 'tag_name': self.selected_element.get('tagName', ''),
                 'id': self.selected_element.get('id'),
                 'class_name': self.selected_element.get('className'),
-                'text_preview': self.selected_element.get('textContent', '')[:200] + ('...' if len(self.selected_element.get('textContent', '')) > 200 else ''),
-                'selection_timestamp': self.selected_element.get('timestamp')
+                'text_preview': (preview_text[:200] + ('...' if len(preview_text) > 200 else '')),
+                'selection_timestamp': self.selected_element.get('timestamp'),
+                'xpath': cross_xpath,
+                'inner_xpath': inner_xpath,
+                'click_frame_url': self.selected_element.get('frame_url')
             },
             'selection_context': {
                 'selected_at_step': len(self.operations),  # 在第几步操作后选择的
                 'page_url': self.page.url if hasattr(self, 'page') and self.page else 'unknown'
             }
         }
+
+    def _compose_cross_frame_xpath(self, frame_trace: Optional[Dict[str, Any]], inner_xpath: Optional[str], top_page_url: Optional[str] = None) -> str:
+        """将frame链与frame内的XPath组合为跨iframe的可读路径字符串。
+        规则：从顶层开始列出每一层frame在父文档中的XPath，最后拼接目标元素在最内层frame的XPath。
+        返回值示例：
+        PAGE:https://example.com -> //html[1]/body[1]/iframe[2] -> URL:https://child.example.com/page -> //div[3]/span[1]
+        """
+        try:
+            segments: List[str] = []
+            if top_page_url:
+                segments.append(f"PAGE:{top_page_url}")
+            if isinstance(frame_trace, dict):
+                chain = frame_trace.get('chain') or []
+                if isinstance(chain, list):
+                    for level in chain:
+                        try:
+                            if not isinstance(level, dict):
+                                continue
+                            xp = level.get('xpath_in_parent')
+                            if xp and isinstance(xp, str) and xp.strip():
+                                segments.append(xp)
+                            else:
+                                tag = (level.get('tag') or 'iframe').lower()
+                                index = level.get('index')
+                                if isinstance(index, int):
+                                    # index是frames列表索引，不一定等同于DOM中的nth，但作为提示保留
+                                    segments.append(f"//{tag}[{index + 1}]")
+                                else:
+                                    segments.append(f"//{tag}")
+                            # 如果该层提供frame_url，记录
+                            try:
+                                lvl_url = level.get('frame_url')
+                                if lvl_url:
+                                    segments.append(f"URL:{lvl_url}")
+                            except Exception:
+                                pass
+                        except Exception:
+                            continue
+            # 若没有任何iframe链条，则不要重复追加与PAGE相同的URL片段
+            if not isinstance(frame_trace, dict) or not (frame_trace.get('chain') or []):
+                pass
+            else:
+                # 末尾如果frame_trace提供当前frame的URL，也加上
+                try:
+                    cur_url = frame_trace.get('current_frame_url')
+                    if cur_url:
+                        segments.append(f"URL:{cur_url}")
+                except Exception:
+                    pass
+            # 追加元素内部XPath
+            if inner_xpath and isinstance(inner_xpath, str) and inner_xpath.strip():
+                segments.append(inner_xpath)
+            # 合成
+            if not segments:
+                return inner_xpath or ''
+            # 去除重复的 PAGE 与紧随其后的相同 URL 片段
+            if len(segments) >= 2 and segments[0].startswith('PAGE:') and segments[1].startswith('URL:'):
+                if segments[0][5:] == segments[1][4:]:
+                    segments.pop(1)
+            return ' -> '.join(segments)
+        except Exception:
+            return inner_xpath or ''
+
+    async def _compute_frame_chain_via_playwright(self, page_obj: Page, target_frame_url: str) -> List[str]:
+        """使用Playwright从顶层文档计算到目标frame的XPath链。
+        返回形如 ["//html[1]/body[1]/div[2]/iframe[1]"] 的列表。如果找不到则返回空。
+        """
+        try:
+            def build_xpath_for_element(el):
+                try:
+                    parts = []
+                    cur = el
+                    depth = 0
+                    while cur and getattr(cur, 'tagName', None) and depth < 25:
+                        tag = cur.tagName.lower()
+                        # 计算同类前序兄弟数量
+                        ix = 1
+                        sib = cur
+                        while True:
+                            try:
+                                sib = sib.previous_sibling
+                            except Exception:
+                                sib = None
+                            if not sib:
+                                break
+                            try:
+                                if getattr(sib, 'tagName', None) == cur.tagName:
+                                    ix += 1
+                            except Exception:
+                                pass
+                        parts.insert(0, f"{tag}[{ix}]")
+                        try:
+                            cur = cur.parent_element
+                        except Exception:
+                            break
+                        depth += 1
+                    return "//" + "/".join(parts)
+                except Exception:
+                    return None
+
+            # 在页面上下文中查找匹配URL的iframe并计算其在父文档的XPath
+            xpath_list = await page_obj.evaluate("""
+                (targetUrl) => {
+                    try {
+                        function buildXPath(el){
+                            try{
+                                const parts=[]; let cur=el; let depth=0;
+                                while(cur && cur.nodeType===1 && depth<25){
+                                    let idx=1, sib=cur;
+                                    while((sib=sib.previousElementSibling)){
+                                        if(sib.tagName===cur.tagName) idx++;
+                                    }
+                                    parts.unshift(cur.tagName.toLowerCase()+"["+idx+"]");
+                                    cur = cur.parentElement; depth++;
+                                }
+                                return "//"+parts.join("/");
+                            }catch(_){ return null; }
+                        }
+                        const iframes = Array.from(document.querySelectorAll('iframe,frame'));
+                        const matches = [];
+                        for (const f of iframes){
+                            try{
+                                if (f.src && (f.src===targetUrl || f.src.indexOf(targetUrl)!==-1 || targetUrl.indexOf(f.src)!==-1)){
+                                    const xp = buildXPath(f);
+                                    if (xp) matches.push(xp);
+                                }
+                            }catch(_){}
+                        }
+                        return matches;
+                    } catch(_e){ return []; }
+                }
+            """, target_frame_url)
+            if isinstance(xpath_list, list) and xpath_list:
+                # 选择最短的一个，通常更接近真实层级
+                xpath_list.sort(key=lambda s: (len(s.split('/')), len(s)))
+                return [xpath_list[0]]
+            return []
+        except Exception:
+            return []
+
+    def _normalize_text(self, text: Optional[str]) -> str:
+        """将任意文本规范化：最多保留连续1个空格与1个换行。"""
+        try:
+            if text is None:
+                return ''
+            s = str(text)
+            s = s.replace('\r\n', '\n').replace('\r', '\n')
+            # 折叠制表符与空格为单个空格
+            s = re.sub(r'[\t ]+', ' ', s)
+            # 去掉换行两侧多余空格
+            s = re.sub(r' *\n *', '\n', s)
+            # 折叠多个换行为单个换行
+            s = re.sub(r'\n{2,}', '\n', s)
+            # 两端裁剪
+            s = s.strip()
+            return s
+        except Exception:
+            return text or ''
+
+    def _normalize_html(self, html: Optional[str]) -> str:
+        """粗粒度HTML规整：
+        - 折叠标签之间的空白 >\s+< → ><
+        - 折叠多余空格/制表符
+        - 最多保留1个换行
+        该规则尽量保守，不修改属性值结构。
+        """
+        try:
+            if html is None:
+                return ''
+            s = str(html)
+            s = s.replace('\r\n', '\n').replace('\r', '\n')
+            s = re.sub(r'>\s+<', '><', s)
+            s = re.sub(r'[\t ]{2,}', ' ', s)
+            s = re.sub(r' *\n *', '\n', s)
+            s = re.sub(r'\n{2,}', '\n', s)
+            s = s.strip()
+            return s
+        except Exception:
+            return html or ''
+
+    def _normalize_dom_context(self, dom_context: Any) -> Any:
+        """规范化dom_context中的文本与HTML字段。"""
+        try:
+            if not isinstance(dom_context, dict):
+                return dom_context
+            ctx = dict(dom_context)
+            el = ctx.get('element')
+            if isinstance(el, dict):
+                el2 = dict(el)
+                if isinstance(el2.get('innerHTML'), str):
+                    el2['innerHTML'] = self._normalize_html(el2.get('innerHTML'))
+                if isinstance(el2.get('outerHTML'), str):
+                    el2['outerHTML'] = self._normalize_html(el2.get('outerHTML'))
+                # 删除元素级textContent，避免与operation['text_content']重复
+                if 'textContent' in el2:
+                    el2.pop('textContent', None)
+                ctx['element'] = el2
+            parent = ctx.get('parent')
+            if isinstance(parent, dict):
+                p2 = dict(parent)
+                ch = p2.get('children')
+                if isinstance(ch, list):
+                    new_children = []
+                    for c in ch:
+                        if isinstance(c, dict):
+                            c2 = dict(c)
+                            if isinstance(c2.get('textContent'), str):
+                                c2['textContent'] = self._normalize_text(c2.get('textContent'))
+                            new_children.append(c2)
+                        else:
+                            new_children.append(c)
+                    p2['children'] = new_children
+                ctx['parent'] = p2
+            return ctx
+        except Exception:
+            return dom_context
 

@@ -68,9 +68,8 @@ class InteractiveCLI:
             ("1", "🎬 新建录制会话", "录制网页操作并自动生成AI代码"),
             ("2", "📋 管理现有会话", "查看、分析、测试已录制的会话"),
             ("3", "🧪 快速测试", "测试现有会话的自动化函数"),
-            ("4", "🚀 生成函数", "将会话转换为Python函数代码"),
-            ("5", "⚙️  系统设置", "配置和系统管理"),
-            ("6", "❓ 帮助信息", "查看使用帮助"),
+            ("4", "⚙️  系统设置", "配置和系统管理"),
+            ("5", "❓ 帮助信息", "查看使用帮助"),
             ("0", "👋 退出程序", "退出智能自动化平台")
         ]
         
@@ -94,49 +93,48 @@ class InteractiveCLI:
         
         choice = Prompt.ask(
             "[bold green]请选择操作[/bold green]",
-            choices=["0", "1", "2", "3", "4", "5", "6"],
+            choices=["0", "1", "2", "3", "4", "5"],
             default="1"
         )
         return choice
     
     async def handle_new_recording(self):
-        """处理新建录制会话"""
+        """处理新建录制会话 - 支持多场景录制"""
         console.print(Panel(
             "[bold blue]🎬 新建录制会话[/bold blue]",
             border_style="blue"
         ))
         
-        # 获取会话信息
-        session_name = Prompt.ask("📝 输入会话名称", default=f"session_{datetime.now().strftime('%m%d_%H%M')}")
+        # 获取任务信息
+        task_name = Prompt.ask("📝 输入任务名称", default=f"task_{datetime.now().strftime('%m%d_%H%M')}")
         
-        # 📋 获取任务描述 - 这是新增的重要环节！
+        # 📋 获取任务总体描述
         console.print(Panel(
-            "[bold cyan]📋 任务描述[/bold cyan]\n\n"
-            "请详细描述您要完成的任务，这将帮助AI更好地理解您的操作意图：\n\n"
+            "[bold cyan]📋 任务总体描述[/bold cyan]\n\n"
+            "请详细描述您要完成的整体任务，您可以针对不同场景进行多次录制：\n\n"
             "💡 示例：\n"
-            "• 在百度搜索'Python教程'并获取前3个结果的标题\n"
-            "• 登录网站并填写用户信息表单\n"
-            "• 从商品页面提取价格和库存信息\n"
-            "• 提交订单并获取订单号",
-            title="[bold yellow]任务理解[/bold yellow]",
+            "• 电商网站商品搜索和筛选功能（可录制：正常搜索、无结果、高级筛选等场景）\n"
+            "• 用户注册和登录流程（可录制：成功注册、登录、错误处理等场景）\n"
+            "• 文档管理系统操作（可录制：上传、查看、删除等不同操作场景）",
+            title="[bold yellow]多场景任务定义[/bold yellow]",
             border_style="cyan"
         ))
         
         task_description = ""
         while not task_description.strip():
             task_description = self._get_multiline_input(
-                "🎯 请描述您要完成的任务",
-                placeholder="例如：在百度搜索'Python教程'并获取前3个结果的标题..."
+                "🎯 请描述您要完成的整体任务",
+                placeholder="例如：电商网站的商品搜索和筛选功能..."
             )
             if not task_description.strip():
                 console.print("❌ 任务描述不能为空，请详细描述您的操作目标", style="red")
         
-        console.print(f"✅ 任务描述: [blue]{task_description}[/blue]")
+        console.print(f"✅ 任务总体描述: [blue]{task_description}[/blue]")
         
+        # 获取目标URL
         while True:
             target_url = Prompt.ask("🌐 输入目标网站URL", default="www.baidu.com")
             try:
-                # 修复URL格式
                 target_url = self._fix_url_format(target_url)
                 break
             except Exception as e:
@@ -149,75 +147,358 @@ class InteractiveCLI:
         if need_prelogin:
             await self._handle_prelogin_setup(target_url)
         
-        # 开始录制
-        console.print(f"\n🎬 开始录制会话: [bold cyan]{session_name}[/bold cyan]")
-        console.print(f"🌐 目标URL: [blue]{target_url}[/blue]")
+        # 创建任务文件夹和元数据
+        task_folder = await self._create_task_structure(task_name, task_description, target_url)
         
-        if need_prelogin:
-            console.print("📋 [yellow]注意：前置登录已完成，现在将开始录制您的业务操作[/yellow]")
+        # 多场景录制循环
+        recording_count = 0
+        recordings_info = []
         
+        while True:
+            recording_count += 1
+            
+            # 场景录制提示
+            console.print(Panel(
+                f"[bold blue]🎬 第 {recording_count} 次录制[/bold blue]\n\n"
+                f"请在即将打开的浏览器中执行您要录制的场景操作\n"
+                f"✅ 操作完成后按 [bold red]Ctrl+C[/bold red] 结束本次录制",
+                title=f"[bold yellow]场景 {recording_count} 录制[/bold yellow]",
+                border_style="yellow"
+            ))
+            
+            Prompt.ask("按回车键开始录制", default="")
+            
+            try:
+                # 执行单次录制
+                recording_info = await self._record_single_scenario(
+                    task_folder, recording_count, target_url, need_prelogin
+                )
+                
+                if recording_info:
+                    # 获取本次录制的场景描述
+                    scenario_description = self._get_scenario_description(recording_count)
+                    
+                    # 更新录制信息
+                    recording_info['scenario_description'] = scenario_description
+                    recordings_info.append(recording_info)
+                    
+                    # 更新任务元数据
+                    await self._update_task_metadata(task_folder, recordings_info)
+                    
+                    console.print(f"✅ 场景 {recording_count} 录制完成: [green]{scenario_description}[/green]")
+                else:
+                    console.print(f"❌ 场景 {recording_count} 录制失败", style="red")
+                    recording_count -= 1  # 不计入失败的录制
+                    
+            except KeyboardInterrupt:
+                console.print(f"\n⏹️  场景 {recording_count} 录制已取消")
+                recording_count -= 1  # 不计入取消的录制
+            except Exception as e:
+                console.print(f"❌ 场景 {recording_count} 录制失败: {e}", style="red")
+                recording_count -= 1  # 不计入失败的录制
+            
+            # 询问是否继续录制
+            if recording_count > 0:
+                if not Confirm.ask(f"是否继续录制其他场景？(当前已录制 {recording_count} 个场景)"):
+                    break
+            else:
+                console.print("⚠️  至少需要录制一个场景才能继续", style="yellow")
+        
+        if recording_count == 0:
+            console.print("❌ 没有成功录制任何场景，任务创建失败", style="red")
+            return
+        
+        # 获取最终函数描述
+        final_description = await self._get_final_function_description(task_description, recordings_info)
+        
+        # 保存最终描述并触发AI分析
+        await self._save_final_description(task_folder, final_description)
+        
+        # 显示任务摘要
         console.print(Panel(
-            "浏览器即将打开，请在浏览器中执行您要自动化的操作\n"
-            "⚠️  只录制业务操作，不要重复登录步骤\n"
-            "✅ 操作完成后按 [bold red]Ctrl+C[/bold red] 结束录制",
-            title="[bold yellow]录制指引[/bold yellow]",
-            border_style="yellow"
+            f"🎯 任务: [cyan]{task_description}[/cyan]\n"
+            f"📊 场景数量: [yellow]{recording_count}[/yellow]\n"
+            f"📎 最终期望: [blue]{final_description['description']}[/blue]",
+            title="[bold green]多场景录制完成[/bold green]",
+            border_style="green"
         ))
         
-        # 等待用户准备
-        Prompt.ask("按回车键开始录制", default="")
+        # 自动进入AI代码生成流程
+        console.print("🤖 现在开始AI代码生成...")
+        await self._trigger_multi_scenario_ai_analysis(
+            task_folder, task_description, final_description['description']
+        )
         
+    # ======= 多场景录制支持方法 =======
+    
+    async def _create_task_structure(self, task_name: str, task_description: str, target_url: str) -> str:
+        """创建任务文件夹结构"""
+        task_folder = f"sessions/{task_name}"
+        task_path = Path(task_folder)
+        task_path.mkdir(parents=True, exist_ok=True)
+        
+        # 创建任务元数据
+        task_metadata = {
+            "task_id": task_name,
+            "task_description": task_description,
+            "target_url": target_url,
+            "created_at": datetime.now().isoformat(),
+            "recordings": [],
+            "status": "recording"
+        }
+        
+        # 保存任务元数据
+        metadata_file = task_path / "task_metadata.json"
+        with open(metadata_file, 'w', encoding='utf-8') as f:
+            json.dump(task_metadata, f, ensure_ascii=False, indent=2)
+        
+        console.print(f"📁 创建任务文件夹: {task_folder}")
+        return task_folder
+    
+    async def _record_single_scenario(
+        self, 
+        task_folder: str, 
+        recording_count: int, 
+        target_url: str, 
+        need_prelogin: bool
+    ) -> Optional[Dict]:
+        """执行单次场景录制"""
         try:
             recorder = WebRecorder()
             
-            # 如果有前置登录，查找最新的认证状态文件
+            # 设置统一的认证状态文件路径（任务级别）
+            task_auth_file = Path(task_folder) / "auth_state.json"
+            
+            # 如果有前置登录或者存在统一认证状态文件，则使用它
             auth_state_file = None
-            if need_prelogin:
-                auth_state_file = self._find_latest_auth_state()
-                if auth_state_file:
-                    console.print(f"🔐 使用认证状态: {auth_state_file.name}", style="blue")
+            if need_prelogin or task_auth_file.exists():
+                if task_auth_file.exists():
+                    auth_state_file = str(task_auth_file)
+                    console.print(f"🔐 使用任务认证状态: {task_auth_file.name}", style="blue")
+                else:
+                    # 查找全局最新认证状态（仅用于第一次录制）
+                    global_auth_file = self._find_latest_auth_state()
+                    if global_auth_file:
+                        auth_state_file = str(global_auth_file)
+                        console.print(f"🔐 使用全局认证状态: {global_auth_file.name}", style="blue")
+            
+            # 设置录制输出目录
+            recording_dir = f"{task_folder}/recording_{recording_count}"
+            recording_session_id = f"recording_{recording_count}"
             
             session_id = await recorder.start_recording(
-                session_name, 
-                target_url, 
-                auth_state_file=str(auth_state_file) if auth_state_file else None,
-                headless=False  # 录制时显示浏览器，便于用户操作
+                recording_session_id,
+                target_url,
+                output_dir=recording_dir,
+                auth_state_file=auth_state_file,
+                auth_state_save_path=str(task_auth_file),  # 保存到任务级别统一文件
+                headless=False,
+                session_id=recording_session_id
             )
             
-            console.print(f"✅ 录制完成！会话ID: [bold green]{session_id}[/bold green]")
-            self.current_session = session_id
+            return {
+                "recording_id": recording_session_id,
+                "recording_dir": recording_dir,
+                "session_id": session_id,
+                "completed_at": datetime.now().isoformat()
+            }
             
-            # 🎯 获取返回值期望 - 这是新增的重要环节！
-            expected_return = await self._get_expected_return_value()
-            
-            # 保存任务描述和返回值期望到会话数据
-            await self._save_task_metadata(session_id, task_description, expected_return)
-            
-            # 显示任务定义摘要
-            console.print(Panel(
-                f"🎯 任务定义: [cyan]{task_description}[/cyan]\n"
-                f"📎 期望返回: [blue]{expected_return['description']}[/blue] ([yellow]{expected_return['type']}[/yellow])",
-                title="[bold green]录制完成[/bold green]",
-                border_style="green"
-            ))
-            
-            # 自动进入AI代码生成流程
-            console.print("🤖 现在开始AI代码生成...")
-            await self._trigger_ai_generation_for_session(
-                session_id, task_description, expected_return['description']
-            )
-                
-        except KeyboardInterrupt:
-            console.print("\n⏹️  录制已取消")
-        except ValueError as e:
-            console.print(f"❌ URL错误: {e}", style="red")
-            console.print("💡 请检查网址格式是否正确", style="yellow")
         except Exception as e:
-            console.print(f"❌ 录制失败: {e}", style="red")
-            console.print("💡 常见解决方案：", style="yellow")
-            console.print("  • 检查网络连接是否正常")
-            console.print("  • 确认目标网站是否可访问")
-            console.print("  • 尝试使用完整的URL（包含https://）")
+            console.print(f"❌ 录制过程出错: {e}", style="red")
+            return None
+    
+    def _get_scenario_description(self, recording_count: int) -> str:
+        """获取场景描述"""
+        console.print(Panel(
+            f"[bold blue]📝 场景 {recording_count} 描述[/bold blue]\n\n"
+            "请简要描述刚才录制的这个场景完成了什么操作：\n\n"
+            "💡 示例：\n"
+            "• 正常商品搜索流程\n"
+            "• 无搜索结果时的处理\n"
+            "• 高级筛选功能使用\n"
+            "• 错误情况的处理",
+            title="[bold yellow]场景说明[/bold yellow]",
+            border_style="blue"
+        ))
+        
+        scenario_description = ""
+        while not scenario_description.strip():
+            scenario_description = self._get_multiline_input(
+                f"📝 请描述场景 {recording_count} 的操作内容",
+                placeholder="例如：正常商品搜索流程..."
+            )
+            if not scenario_description.strip():
+                console.print("❌ 场景描述不能为空，请简要描述这次录制的内容", style="red")
+        
+        return scenario_description.strip()
+    
+    async def _update_task_metadata(self, task_folder: str, recordings_info: List[Dict]):
+        """更新任务元数据"""
+        try:
+            metadata_file = Path(task_folder) / "task_metadata.json"
+            
+            # 读取现有元数据
+            with open(metadata_file, 'r', encoding='utf-8') as f:
+                task_metadata = json.load(f)
+            
+            # 更新录制信息
+            task_metadata["recordings"] = [
+                {
+                    "recording_id": rec["recording_id"],
+                    "scenario_description": rec["scenario_description"],
+                    "completed_at": rec["completed_at"]
+                }
+                for rec in recordings_info
+            ]
+            task_metadata["last_updated"] = datetime.now().isoformat()
+            
+            # 保存更新后的元数据
+            with open(metadata_file, 'w', encoding='utf-8') as f:
+                json.dump(task_metadata, f, ensure_ascii=False, indent=2)
+                
+        except Exception as e:
+            console.print(f"⚠️  更新任务元数据失败: {e}", style="yellow")
+    
+    async def _get_final_function_description(self, task_description: str, recordings_info: List[Dict]) -> Dict:
+        """获取最终函数描述"""
+        console.print(Panel(
+            "[bold cyan]🎯 最终函数描述[/bold cyan]\n\n"
+            "现在请描述您希望生成的函数应该如何工作：\n\n"
+            "💡 可以包括：\n"
+            "• 函数的输入参数\n"
+            "• 期望的返回结果\n"
+            "• 如何处理不同场景\n"
+            "• 错误处理要求等",
+            title="[bold yellow]整体函数期望[/bold yellow]",
+            border_style="cyan"
+        ))
+        
+        # 显示录制场景摘要
+        scenario_summary = "\n".join([
+            f"• 场景 {i+1}: {rec['scenario_description']}"
+            for i, rec in enumerate(recordings_info)
+        ])
+        
+        console.print(Panel(
+            f"[bold blue]已录制场景摘要：[/bold blue]\n{scenario_summary}",
+            border_style="blue"
+        ))
+        
+        final_description = ""
+        while not final_description.strip():
+            final_description = self._get_multiline_input(
+                "🔧 请描述您期望的函数功能和返回结果",
+                placeholder="例如：根据搜索关键词返回商品列表，支持不同筛选条件，处理无结果情况..."
+            )
+            if not final_description.strip():
+                console.print("❌ 函数描述不能为空，请描述您的期望", style="red")
+        
+        return {
+            "description": final_description.strip(),
+            "type": "dict",
+            "scenarios_count": len(recordings_info),
+            "defined_at": datetime.now().isoformat()
+        }
+    
+    async def _save_final_description(self, task_folder: str, final_description: Dict):
+        """保存最终函数描述到task_metadata.json"""
+        try:
+            # 直接更新任务元数据，不再创建单独的final_description.json
+            metadata_file = Path(task_folder) / "task_metadata.json"
+            with open(metadata_file, 'r', encoding='utf-8') as f:
+                task_metadata = json.load(f)
+            
+            task_metadata["status"] = "completed"
+            task_metadata["final_description"] = final_description
+            task_metadata["completed_at"] = datetime.now().isoformat()
+            
+            with open(metadata_file, 'w', encoding='utf-8') as f:
+                json.dump(task_metadata, f, ensure_ascii=False, indent=2)
+            
+            console.print("💾 最终描述已保存到task_metadata.json")
+                
+        except Exception as e:
+            console.print(f"⚠️  保存最终描述失败: {e}", style="yellow")
+    
+    async def _trigger_multi_scenario_ai_analysis(
+        self, 
+        task_folder: str, 
+        task_description: str, 
+        final_description: str
+    ):
+        """触发多场景AI分析"""
+        # 询问是否保存生成的函数
+        save_function = Confirm.ask("是否将生成的函数保存到文件？", default=True)
+        save_path = None
+        
+        if save_function:
+            # 从task_folder提取任务名称
+            task_name = Path(task_folder).name
+            default_path = f"generated_functions/multi_{task_name}.py"
+            
+            save_path = Prompt.ask(
+                "输入保存路径",
+                default=default_path
+            )
+        
+        # 开始AI分析
+        console.print(Panel(
+            f"🤖 开始多场景AI分析和代码生成...\n\n"
+            f"任务: [cyan]{task_description[:50]}{'...' if len(task_description) > 50 else ''}[/cyan]\n"
+            f"期望: [blue]{final_description[:50]}{'...' if len(final_description) > 50 else ''}[/blue]",
+            title="[bold yellow]AI分析中[/bold yellow]",
+            border_style="yellow"
+        ))
+        
+        with Progress(
+            SpinnerColumn(),
+            TextColumn("[progress.description]{task.description}"),
+            console=console
+        ) as progress:
+            task = progress.add_task("多场景AI分析和代码生成中...", total=None)
+            
+            try:
+                # 调用AI分析接口
+                result = await self.session_manager.trigger_ai_analysis(
+                    session_folder_path=task_folder,
+                    task_description=task_description,
+                    output_format_requirements=final_description,
+                    save_function_path=save_path
+                )
+                
+                progress.update(task, description="分析完成!")
+                
+                # 显示结果
+                if result["success"]:
+                    console.print(Panel(
+                        f"✅ 多场景AI分析完成！\n\n"
+                        f"{'📁 已保存到: ' + result['saved_path'] if result['saved_path'] else '💡 代码已生成'}",
+                        title="[bold green]成功[/bold green]",
+                        border_style="green"
+                    ))
+                    
+                    # 询问是否查看生成的代码
+                    if Confirm.ask("是否查看生成的代码？"):
+                        from rich.syntax import Syntax
+                        code_preview = result["function_code"]
+                        if len(code_preview) > 1500:
+                            code_preview = code_preview[:1500] + "\n\n... (代码过长，已截断，完整代码请查看保存的文件)"
+                        
+                        syntax = Syntax(code_preview, "python", theme="monokai", line_numbers=True)
+                        console.print(Panel(syntax, title="生成的Python代码"))
+                
+                else:
+                    console.print(Panel(
+                        f"❌ 多场景AI分析失败\n\n"
+                        f"错误信息: {result.get('error', '未知错误')}",
+                        title="[bold red]失败[/bold red]",
+                        border_style="red"
+                    ))
+            
+            except Exception as e:
+                console.print(f"❌ AI分析过程出错: {e}", style="red")
+
+    # ======= 原有方法保持兼容 =======
     
     async def _trigger_ai_generation_for_session(
         self, 
@@ -384,7 +665,7 @@ class InteractiveCLI:
             async with async_playwright() as playwright:
                 browser = await playwright.chromium.launch(headless=False)
                 context = await browser.new_context(
-                    viewport={'width': 1920, 'height': 1080}
+                    viewport={"width": 960, "height": 580}
                 )
                 page = await context.new_page()
                 
@@ -529,7 +810,6 @@ class InteractiveCLI:
             actions = [
                 ("分析会话", "🤖"),
                 ("测试会话", "🧪"), 
-                ("生成函数", "🚀"),
                 ("删除会话", "🗑️"),
                 ("返回主菜单", "↩️")
             ]
@@ -550,7 +830,7 @@ class InteractiveCLI:
                 action_idx = IntPrompt.ask(
                     "选择操作",
                     default=1,
-                    choices=["1", "2", "3", "4", "5"]
+                    choices=["1", "2", "3", "4"]
                 )
                 
                 selected_session = sessions[session_idx - 1]
@@ -560,11 +840,9 @@ class InteractiveCLI:
                     await self._analyze_session(session_id)
                 elif action_idx == 2:  # 测试会话
                     await self._test_session(session_id)
-                elif action_idx == 3:  # 生成函数
-                    self._generate_function(session_id, selected_session['name'])
-                elif action_idx == 4:  # 删除会话
+                elif action_idx == 3:  # 删除会话
                     self._delete_session(session_id, selected_session['name'])
-                elif action_idx == 5:  # 返回主菜单
+                elif action_idx == 4:  # 返回主菜单
                     break
                     
             except ValueError:
@@ -660,32 +938,6 @@ class InteractiveCLI:
                     params[param_name] = value  # 转换失败时保持字符串
         
         return params
-    
-    def _generate_function(self, session_id: str, session_name: str):
-        """生成函数"""
-        console.print(f"🚀 生成函数: [cyan]{session_id}[/cyan]")
-        
-        try:
-            function_code = self.session_manager.generate_function(session_id)
-            
-            # 生成输出文件名
-            clean_name = session_name.replace(' ', '_').replace('-', '_').lower()
-            output_file = f"generated_functions/{clean_name}.py"
-            
-            Path("generated_functions").mkdir(exist_ok=True)
-            Path(output_file).write_text(function_code, encoding='utf-8')
-            
-            console.print(f"✅ 函数已生成: [bold green]{output_file}[/bold green]")
-            
-            # 询问是否查看代码
-            if Confirm.ask("是否查看生成的代码？"):
-                from rich.syntax import Syntax
-                syntax = Syntax(function_code[:1000] + "\n..." if len(function_code) > 1000 else function_code, 
-                              "python", theme="monokai", line_numbers=True)
-                console.print(Panel(syntax, title="生成的Python代码"))
-            
-        except Exception as e:
-            console.print(f"❌ 函数生成失败: {e}", style="red")
     
     def _delete_session(self, session_id: str, session_name: str):
         """删除会话"""
@@ -1313,11 +1565,9 @@ class InteractiveCLI:
                     await self.handle_session_management()
                 elif choice == "3":  # 快速测试
                     await self.handle_quick_test()
-                elif choice == "4":  # 生成函数
-                    console.print("🚀 批量生成功能开发中...")
-                elif choice == "5":  # 系统设置
+                elif choice == "4":  # 系统设置
                     self.show_system_settings()
-                elif choice == "6":  # 帮助
+                elif choice == "5":  # 帮助
                     self.show_help()
                 
                 # 等待用户按键继续

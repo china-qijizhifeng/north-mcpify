@@ -43,6 +43,19 @@ class EventListener:
             # 暴露一个立即事件传输函数，确保导航前事件不丢失
             async def __automation_emit(event: Dict):  # noqa: N802
                 try:
+                    # 为事件附带来源页面，便于后续在正确的Page上截图
+                    try:
+                        if isinstance(event, dict):
+                            event['__page'] = page
+                            try:
+                                event.setdefault('page_url', getattr(page, 'url', None))
+                            except Exception:
+                                pass
+                        else:
+                            event = {'raw': event, '__page': page}
+                    except Exception:
+                        pass
+
                     event_type = (event or {}).get('type')
                     if event_type == 'click' and on_click:
                         asyncio.create_task(on_click(event))
@@ -133,9 +146,73 @@ class EventListener:
                                                     return parts.join(' > ');
                                                 } catch (e) { return window.generateSelector(element); }
                                             };
+                                            // 简单的XPath生成
+                                            window.generateXPath = function(element) {
+                                                try {
+                                                    if (!element) return '';
+                                                    if (element.nodeType !== 1) element = element.parentElement;
+                                                    const maxDepth = 20; const segments = []; let el = element; let depth = 0;
+                                                    while (el && el.nodeType === 1 && depth < maxDepth) {
+                                                        let index = 1; let sib = el;
+                                                        while ((sib = sib.previousElementSibling)) { if (sib.tagName === el.tagName) index++; }
+                                                        segments.unshift(el.tagName.toLowerCase() + '[' + index + ']');
+                                                        el = el.parentElement; depth++;
+                                                    }
+                                                    return '//' + segments.join('/');
+                                                } catch (e) { return ''; }
+                                            };
+                                            // frame trace 生成（从顶层到当前frame）
+                                            window.generateFrameTrace = function() {
+                                                try {
+                                                    function getFrameIndex(win) {
+                                                        try {
+                                                            if (!win.parent || win.parent === win) return null;
+                                                            const frames = win.parent.frames;
+                                                            for (let i = 0; i < frames.length; i++) { try { if (frames[i] === win) return i; } catch(_){} }
+                                                            return null;
+                                                        } catch (_) { return null; }
+                                                    }
+                                                    function buildXPathInParent(el) {
+                                                        try {
+                                                            if (!el) return null;
+                                                            const segs = []; let cur = el; let depth = 0;
+                                                            while (cur && cur.nodeType === 1 && depth < 20) {
+                                                                let ix = 1, sib = cur;
+                                                                while ((sib = sib.previousElementSibling)) { if (sib.tagName === cur.tagName) ix++; }
+                                                                segs.unshift(cur.tagName.toLowerCase() + '[' + ix + ']');
+                                                                cur = cur.parentElement; depth++;
+                                                            }
+                                                            return '//' + segs.join('/');
+                                                        } catch (_) { return null; }
+                                                    }
+                                                    function getFrameElementInfo(win) {
+                                                        const info = { index: getFrameIndex(win), name: null, selector: null, xpath_in_parent: null, tag: 'iframe', frame_url: null };
+                                                        try { info.name = win.name || null; } catch(_){}
+                                                        try { info.frame_url = win.location && win.location.href || null; } catch(_) { info.frame_url = null; }
+                                                        try {
+                                                            const fe = win.frameElement;
+                                                            if (fe) {
+                                                                const tag = (fe.tagName || '').toLowerCase();
+                                                                info.tag = tag || 'iframe';
+                                                                if (fe.id) info.selector = '#' + fe.id; else if (fe.className && typeof fe.className === 'string') {
+                                                                    const cls = fe.className.trim().split(' ').filter(Boolean)[0];
+                                                                    info.selector = cls ? tag + '.' + cls : tag;
+                                                                } else { info.selector = tag; }
+                                                                info.xpath_in_parent = buildXPathInParent(fe);
+                                                            }
+                                                        } catch(_){}
+                                                        return info;
+                                                    }
+                                                    const chain = [];
+                                                    try { let w = window; while (w !== w.top) { chain.unshift(getFrameElementInfo(w)); w = w.parent; } } catch(_){ }
+                                                    let curUrl = null; try { curUrl = location.href; } catch(_){}
+                                                    return { chain: chain, depth: chain.length, current_frame_url: curUrl };
+                                                } catch(_) { return { chain: [], depth: 0, current_frame_url: null }; }
+                                            };
                                             
-                                            // 点击事件监听（冒泡阶段），在元素选择模式下跳过
-                                            document.addEventListener('click', (event) => {
+                                            // 在window捕获阶段优先监听点击，避免被拦截
+                                            window.addEventListener('click', (event) => {
+                                                try { if (event.__automationCapturedByWindow) return; event.__automationCapturedByWindow = true; } catch (e) {}
                                                 try {
                                                     if (window.elementSelectionMode) {
                                                         return;
@@ -149,7 +226,10 @@ class EventListener:
                                                         text_content: event.target.textContent?.trim() || '',
                                                         timestamp: Date.now(),
                                                         x: event.clientX,
-                                                        y: event.clientY
+                                                        y: event.clientY,
+                                                        frame_url: (function(){ try { return location.href; } catch(_) { return null; } })(),
+                                                        frame_trace: (typeof window.generateFrameTrace === 'function') ? window.generateFrameTrace() : null,
+                                                        xpath: (typeof window.generateXPath === 'function') ? window.generateXPath(event.target) : ''
                                                     };
                                                     try {
                                                         const el = event.target;
@@ -193,7 +273,36 @@ class EventListener:
                                                         try { eventData.__delivered = true; window.__automationEmit(eventData); } catch (e) {}
                                                     }
                                                     window.webAutomationEvents.push(eventData);
-                                                    console.log('[WebAutomation] 强制初始化-点击事件:', eventData);
+                                                    console.log('[WebAutomation] 强制初始化-WindowCapture-点击事件:', eventData);
+                                                } catch (e) {}
+                                            }, true);
+
+                                            // 冒泡阶段监听：若window捕获已处理则跳过
+                                            document.addEventListener('click', (event) => {
+                                                try { if (event.__automationCapturedByWindow) return; } catch (e) {}
+                                                try {
+                                                    if (window.elementSelectionMode) {
+                                                        return;
+                                                    }
+                                                } catch (e) {}
+                                                try {
+                                                    const eventData = {
+                                                        type: 'click',
+                                                        selector: window.generateSelector(event.target),
+                                                        robust_selector: window.generateRobustSelector(event.target),
+                                                        text_content: event.target.textContent?.trim() || '',
+                                                        timestamp: Date.now(),
+                                                        x: event.clientX,
+                                                        y: event.clientY,
+                                                        frame_url: (function(){ try { return location.href; } catch(_) { return null; } })(),
+                                                        frame_trace: (typeof window.generateFrameTrace === 'function') ? window.generateFrameTrace() : null,
+                                                        xpath: (typeof window.generateXPath === 'function') ? window.generateXPath(event.target) : ''
+                                                    };
+                                                    if (typeof window.__automationEmit === 'function') {
+                                                        try { eventData.__delivered = true; window.__automationEmit(eventData); } catch (e) {}
+                                                    }
+                                                    window.webAutomationEvents.push(eventData);
+                                                    console.log('[WebAutomation] 强制初始化-DocumentBubble-点击事件:', eventData);
                                                 } catch (e) {}
                                             }, true);
                                             
@@ -203,7 +312,10 @@ class EventListener:
                                                         type: 'input',
                                                         selector: window.generateSelector(event.target),
                                                         value: event.target.value || '',
-                                                        timestamp: Date.now()
+                                                        timestamp: Date.now(),
+                                                        frame_url: (function(){ try { return location.href; } catch(_) { return null; } })(),
+                                                        frame_trace: (typeof window.generateFrameTrace === 'function') ? window.generateFrameTrace() : null,
+                                                        xpath: (typeof window.generateXPath === 'function') ? window.generateXPath(event.target) : ''
                                                     };
                                                     if (typeof window.__automationEmit === 'function') {
                                                         try { eventData.__delivered = true; window.__automationEmit(eventData); } catch (e) {}
@@ -257,17 +369,29 @@ class EventListener:
                     if events:
                         console.print(f"🎯 检测到 {len(events)} 个事件: {[e.get('type', 'unknown') for e in events]}")
                     elif loop_count % 10 == 0:  # 每5秒打印一次状态
-                        console.print(f"🔍 事件循环运行中... (第{loop_count}次检查)")
+                        # console.print(f"🔍 事件循环运行中... (第{loop_count}次检查)")
                         
                         # 定期检查JavaScript状态
                         try:
                             js_check = await page.evaluate('window.webAutomationEvents ? window.webAutomationEvents.length : -1')
-                            console.print(f"📊 事件队列状态: {js_check} 个事件等待处理")
+                            if js_check != 0:
+                                console.print(f"📊 事件队列状态: {js_check} 个事件等待处理")
                         except Exception as e:
                             console.print(f"⚠️  JavaScript状态检查失败: {e}")
                     
                     for event in events:
                         try:
+                            # 同步补充来源页面信息，避免在其他页面/弹窗时回退到初始页面
+                            try:
+                                if isinstance(event, dict):
+                                    event['__page'] = page
+                                    try:
+                                        event.setdefault('page_url', getattr(page, 'url', None))
+                                    except Exception:
+                                        pass
+                            except Exception:
+                                pass
+
                             # 跳过已通过快速通道上报的事件，避免重复
                             if isinstance(event, dict) and event.get('__delivered'):
                                 continue

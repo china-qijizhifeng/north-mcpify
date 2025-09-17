@@ -98,72 +98,12 @@ class TestSessionManager(unittest.TestCase):
         self.assertTrue(saved_analysis['analyzed'])
         self.assertEqual(len(saved_analysis['suggested_parameters']), 1)
         self.assertEqual(saved_analysis['suggested_parameters'][0]['name'], 'username')
-    
-    def test_function_generation(self):
-        """测试函数生成"""
-        # 创建包含分析结果的会话
-        session_id = "test_session_003"
-        session_dir = Path(self.test_dir) / session_id
-        session_dir.mkdir()
-        
-        session_data = {
-            "session_id": session_id,
-            "metadata": {
-                "name": "test_automation",
-                "url": "https://example.com"
-            },
-            "operations": [
-                {
-                    "step_id": 1,
-                    "action": "click",
-                    "selector": "#login-btn",
-                    "value": ""
-                },
-                {
-                    "step_id": 2,
-                    "action": "input",
-                    "selector": "#username",
-                    "value": "test_user"
-                }
-            ],
-            "ai_analysis": {
-                "analyzed": True,
-                "suggested_parameters": [
-                    {
-                        "name": "username",
-                        "type": "str",
-                        "description": "登录用户名",
-                        "required": True
-                    }
-                ]
-            }
-        }
-        
-        with open(session_dir / 'metadata.json', 'w') as f:
-            json.dump(session_data, f)
-        
-        # 测试函数生成
-        function_code = self.session_manager.generate_function(session_id)
-        
-        self.assertIn('def test_automation', function_code)
-        self.assertIn('username: str', function_code)
-        self.assertIn('async def', function_code)
-        self.assertIn('playwright', function_code)
-
 class TestUtilities(unittest.TestCase):
     """工具函数测试"""
     
-    def test_clean_function_name(self):
-        """测试函数名清理"""
-        from src.session.manager import SessionManager
-        manager = SessionManager()
-        
-        # 测试各种输入
-        self.assertEqual(manager._clean_function_name("Test Function"), "test_function")
-        self.assertEqual(manager._clean_function_name("Login-Demo!"), "logindemo")
-        self.assertEqual(manager._clean_function_name("123test"), "automation_123test")
-        self.assertEqual(manager._clean_function_name(""), "automation_function")
-        self.assertEqual(manager._clean_function_name("用户登录"), "用户登录")  # 中文字符保留
+    def test_placeholder(self):
+        """占位测试，避免空测试类"""
+        self.assertTrue(True)
 
 if __name__ == '__main__':
     unittest.main()

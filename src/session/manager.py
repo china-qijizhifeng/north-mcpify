@@ -170,209 +170,6 @@ class SessionManager:
             console.print(f"❌ 删除会话失败: {e}", style="red")
             return False
     
-    def generate_function(self, session_id: str) -> str:
-        """生成Python函数代码"""
-        session_data = self.load_session(session_id)
-        if not session_data:
-            raise ValueError(f"会话不存在: {session_id}")
-        
-        analysis = session_data.get('ai_analysis', {})
-        if not analysis.get('analyzed'):
-            raise ValueError("会话尚未分析")
-        
-        operations = session_data.get('operations', [])
-        suggested_params = analysis.get('suggested_parameters', [])
-        function_name = session_data.get('metadata', {}).get('name', 'automation_function')
-        
-        # 清理函数名
-        function_name = self._clean_function_name(function_name)
-        
-        # 生成函数签名
-        params_str = self._generate_function_parameters(suggested_params)
-        
-        # 生成函数体
-        function_body = self._generate_function_body(operations, suggested_params)
-        
-        # 生成完整函数代码
-        function_code = f'''"""
-自动生成的网页自动化函数
-会话ID: {session_id}
-生成时间: {datetime.now().isoformat()}
-"""
-
-import asyncio
-from playwright.async_api import async_playwright
-from typing import Optional, Dict, Any
-
-async def {function_name}({params_str}) -> Dict[str, Any]:
-    """
-    {session_data.get('metadata', {}).get('name', '自动化函数')}
-    
-    参数:
-{self._generate_param_docs(suggested_params)}
-    
-    返回:
-        Dict[str, Any]: 执行结果
-    """
-    
-    async with async_playwright() as playwright:
-        browser = await playwright.chromium.launch(headless=True)
-        context = await browser.new_context()
-        page = await context.new_page()
-        
-        try:
-{function_body}
-            
-            result = {{
-                "success": True,
-                "message": "自动化执行成功",
-                "final_url": page.url,
-                "title": await page.title()
-            }}
-            
-        except Exception as e:
-            result = {{
-                "success": False,
-                "error": str(e),
-                "message": "自动化执行失败"
-            }}
-            
-        finally:
-            await browser.close()
-        
-        return result
-
-# 同步包装函数
-def {function_name}_sync({params_str}) -> Dict[str, Any]:
-    """
-    {function_name} 的同步版本
-    """
-    return asyncio.run({function_name}({self._generate_param_call(suggested_params)}))
-
-if __name__ == "__main__":
-    # 示例用法
-    result = {function_name}_sync({self._generate_example_params(suggested_params)})
-    print(result)
-'''
-        
-        return function_code
-    
-    def _clean_function_name(self, name: str) -> str:
-        """清理函数名"""
-        import re
-        # 移除非字母数字字符，转换为下划线
-        name = re.sub(r'[^\w\s]', '', name)
-        name = re.sub(r'\s+', '_', name.strip())
-        name = name.lower()
-        
-        # 确保以字母开头
-        if name and not name[0].isalpha():
-            name = 'automation_' + name
-        
-        return name or 'automation_function'
-    
-    def _generate_function_parameters(self, params: List[Dict]) -> str:
-        """生成函数参数"""
-        param_strs = []
-        
-        for param in params:
-            param_name = param['name']
-            param_type = param.get('type', 'str')
-            default_value = param.get('default')
-            required = param.get('required', True)
-            
-            if param_type == 'str':
-                type_hint = 'str'
-            elif param_type == 'int':
-                type_hint = 'int'
-            elif param_type == 'bool':
-                type_hint = 'bool'
-            else:
-                type_hint = 'Any'
-            
-            if not required and default_value is not None:
-                if param_type == 'str':
-                    param_strs.append(f'{param_name}: {type_hint} = "{default_value}"')
-                else:
-                    param_strs.append(f'{param_name}: {type_hint} = {default_value}')
-            elif not required:
-                param_strs.append(f'{param_name}: Optional[{type_hint}] = None')
-            else:
-                param_strs.append(f'{param_name}: {type_hint}')
-        
-        return ', '.join(param_strs)
-    
-    def _generate_function_body(self, operations: List[Dict], params: List[Dict]) -> str:
-        """生成函数体"""
-        body_lines = []
-        
-        # 导航到起始页面
-        if operations:
-            first_op = operations[0]
-            start_url = first_op.get('page_url', '')
-            body_lines.append(f'            # 导航到起始页面')
-            body_lines.append(f'            await page.goto("{start_url}")')
-            body_lines.append('')
-        
-        # 生成操作代码
-        for i, operation in enumerate(operations, 1):
-            action = operation['action']
-            selector = operation['selector']
-            value = operation.get('value', '')
-            
-            body_lines.append(f'            # 步骤 {i}: {action}')
-            
-            if action == 'click':
-                body_lines.append(f'            await page.click("{selector}")')
-            elif action == 'input':
-                # 检查是否需要参数化
-                param_value = self._find_parameter_for_value(value, params)
-                if param_value:
-                    body_lines.append(f'            await page.fill("{selector}", {param_value})')
-                else:
-                    body_lines.append(f'            await page.fill("{selector}", "{value}")')
-            elif action == 'navigation':
-                body_lines.append(f'            await page.goto("{value}")')
-            
-            body_lines.append(f'            await page.wait_for_timeout(1000)')
-            body_lines.append('')
-        
-        return '\n'.join(body_lines)
-    
-    def _find_parameter_for_value(self, value: str, params: List[Dict]) -> Optional[str]:
-        """查找值对应的参数"""
-        # 简单的参数匹配逻辑
-        for param in params:
-            param_name = param['name']
-            if param_name.lower() in value.lower():
-                return param_name
-        return None
-    
-    def _generate_param_docs(self, params: List[Dict]) -> str:
-        """生成参数文档"""
-        docs = []
-        for param in params:
-            docs.append(f"        {param['name']} ({param.get('type', 'str')}): {param.get('description', '')}")
-        return '\n'.join(docs) if docs else '        无参数'
-    
-    def _generate_param_call(self, params: List[Dict]) -> str:
-        """生成参数调用"""
-        return ', '.join([param['name'] for param in params])
-    
-    def _generate_example_params(self, params: List[Dict]) -> str:
-        """生成示例参数"""
-        examples = []
-        for param in params:
-            if param.get('type') == 'str':
-                examples.append(f"{param['name']}=\"示例值\"")
-            elif param.get('type') == 'int':
-                examples.append(f"{param['name']}=123")
-            elif param.get('type') == 'bool':
-                examples.append(f"{param['name']}=True")
-            else:
-                examples.append(f"{param['name']}=\"示例值\"")
-        return ', '.join(examples)
-    
     # ======= 新增AI分析接口 =======
     
     async def trigger_ai_analysis(
@@ -545,23 +342,175 @@ if __name__ == "__main__":
         task_description: str,
         output_format_requirements: str
     ) -> str:
-        prompt = '''我刚刚完成了用户对于一系列浏览器操作的动作收集，他的存储路径是$session_path，现在我想把录制的步骤变成可复用的真正的Python代码。我给你提供的$session_path路径有所有相关的录制信息。
-<录制信息目录结构概览>
+        # 所有任务都使用多场景分析逻辑
+        return await self._analyze_multi_scenario_task(
+            session_folder_path, task_description, output_format_requirements
+        )
+    
+    async def _analyze_multi_scenario_task(
+        self,
+        session_folder_path: str,
+        task_description: str,
+        output_format_requirements: str
+    ) -> str:
+        """分析多场景任务"""
+        # 加载任务数据
+        task_data = self._load_multi_scenario_data(session_folder_path)
+        
+        # 构建多场景提示词
+        prompt = self._build_multi_scenario_prompt(
+            session_folder_path, task_data, task_description, output_format_requirements
+        )
+        
+        # 执行AI分析
+        return await self._execute_ai_analysis(prompt, session_folder_path)
+    
+    def _load_multi_scenario_data(self, session_folder_path: str) -> Dict:
+        """加载任务数据，兼容单场景和多场景格式"""
+        session_path = Path(session_folder_path)
+        
+        # 检查是否为多场景格式
+        task_metadata_file = session_path / "task_metadata.json"
+        is_multi_scenario = task_metadata_file.exists() or len(list(session_path.glob("recording_*"))) > 0
+        
+        if is_multi_scenario:
+            # 多场景格式
+            task_metadata = {}
+            if task_metadata_file.exists():
+                with open(task_metadata_file, 'r', encoding='utf-8') as f:
+                    task_metadata = json.load(f)
+            
+            # 从task_metadata中获取final_description，如果没有则尝试从单独文件读取（向后兼容）
+            final_description = task_metadata.get("final_description", {})
+            if not final_description:
+                final_description_file = session_path / "final_description.json"
+                if final_description_file.exists():
+                    with open(final_description_file, 'r', encoding='utf-8') as f:
+                        final_description = json.load(f)
+            
+            # 加载所有录制场景数据
+            recordings_data = []
+            recording_dirs = sorted(session_path.glob("recording_*"))
+            
+            for recording_dir in recording_dirs:
+                recording_data = {
+                    "recording_id": recording_dir.name,
+                    "path": str(recording_dir)
+                }
+                
+                # 加载该录制的元数据
+                metadata_file = recording_dir / "metadata.json"
+                if metadata_file.exists():
+                    with open(metadata_file, 'r', encoding='utf-8') as f:
+                        recording_data["metadata"] = json.load(f)
+                
+                # 加载操作数据
+                operations_file = recording_dir / "operations.json"
+                if operations_file.exists():
+                    with open(operations_file, 'r', encoding='utf-8') as f:
+                        recording_data["operations"] = json.load(f)
+                
+                recordings_data.append(recording_data)
+            
+            return {
+                "task_metadata": task_metadata,
+                "final_description": final_description,
+                "recordings": recordings_data
+            }
+        
+        else:
+            # 单场景格式，转换为多场景格式
+            metadata_file = session_path / "metadata.json"
+            operations_file = session_path / "operations.json"
+            
+            # 构建兼容的任务元数据
+            task_metadata = {
+                "task_id": session_path.name,
+                "task_description": "单场景任务",
+                "recordings": [
+                    {
+                        "recording_id": "single_recording",
+                        "scenario_description": "主要操作流程",
+                        "completed_at": datetime.now().isoformat()
+                    }
+                ]
+            }
+            
+            # 构建兼容的最终描述
+            final_description = {
+                "description": "基于单场景录制的自动化函数",
+                "type": "dict",
+                "scenarios_count": 1
+            }
+            
+            # 构建兼容的录制数据
+            recordings_data = [{
+                "recording_id": "single_recording",
+                "path": str(session_path)
+            }]
+            
+            # 加载单场景的元数据和操作
+            if metadata_file.exists():
+                with open(metadata_file, 'r', encoding='utf-8') as f:
+                    recordings_data[0]["metadata"] = json.load(f)
+            
+            if operations_file.exists():
+                with open(operations_file, 'r', encoding='utf-8') as f:
+                    recordings_data[0]["operations"] = json.load(f)
+            
+            return {
+                "task_metadata": task_metadata,
+                "final_description": final_description,
+                "recordings": recordings_data
+            }
+    
+    def _build_multi_scenario_prompt(
+        self, 
+        session_folder_path: str, 
+        task_data: Dict, 
+        task_description: str, 
+        output_format_requirements: str
+    ) -> str:
+        """构建多场景AI提示词"""
+        recordings = task_data.get("recordings", [])
+        task_metadata = task_data.get("task_metadata", {})
+        
+        # 构建场景描述
+        scenarios_info = ""
+        for i, recording in enumerate(recordings, 1):
+            scenario_desc = "未描述"
+            for rec_info in task_metadata.get("recordings", []):
+                if rec_info.get("recording_id") == recording["recording_id"]:
+                    scenario_desc = rec_info.get("scenario_description", "未描述")
+                    break
+            
+            scenarios_info += f"场景{i}（{recording['recording_id']}）:\n{scenario_desc}\n\n"
+        
+        prompt = '''我刚刚完成了用户对于一系列浏览器操作的动作收集，他的存储路径是$session_path，其中可能包括多次用户的录制，每次录制都有用户的描述，他这次录制完成了什么样的任务，现在我想把录制的步骤变成可复用的真正的Python代码。我给你提供的$session_path路径有所有相关的录制信息。
+
+<多次录制信息目录结构概览>
 ```
-/your/custom/session_path/
-├── screenshots/                  # 截图文件夹（步骤可能有跳跃）
-│   ├── step_1.png                  # 第1步操作截图
-│   ├── step_3.png                  # 第3步操作截图
-│   └── step_N.png                  # 第N步操作截图
-├── html_snapshots/              # HTML快照文件夹
-│   ├── 000_www_example_com_.html   # 第1个页面的HTML快照
-│   ├── 001_www_example_com_s.html  # 第2个页面的HTML快照
-│   └── metadata.json               # HTML快照元数据
-├── operations.json               # 操作记录文件
-├── metadata.json                # 会话元数据
-├── auth_state.json              # 浏览器认证状态
-└── selected_element_highlight.png              # 用户选择的期望返回的内容被包含的元素的截图
+/your/custom/task_path/
+├── task_metadata.json              # 任务总体信息、各场景描述和最终函数期望描述
+├── recording_1/                    # 第一个场景录制
+│   ├── screenshots/                  # 截图文件夹
+│   │   ├── step_1.png               # 第1步操作截图
+│   │   └── step_N.png               # 第N步操作截图
+│   ├── html_snapshots/              # HTML快照文件夹
+│   │   ├── 000_www_example_com_.html # 页面HTML快照
+│   │   └── metadata.json            # HTML快照元数据
+│   ├── operations.json              # 操作记录文件
+│   ├── metadata.json               # 录制会话元数据
+│   ├── auth_state.json             # 浏览器认证状态
+│   └── selected_element_highlight.png # 用户选择的期望返回元素截图
+├── recording_2/                    # 第二个场景录制
+│   └── ...                         # 相同的文件结构
+└── recording_N/                    # 第N个场景录制
+    └── ...                         # 相同的文件结构
 ```
+
+## 一些核心文件/文件夹说明
+
 ### screenshots 文件夹
 作用: 保存每个自动化操作步骤的屏幕截图，步骤可能不连续（是因为输入的多个事件会被合并为一个事件）
 
@@ -607,22 +556,8 @@ URL: https://www.example.com/
 </body>
 </html>
 ```
-### metadata.json 结构
-```
-{
-  "snapshots": [
-    {
-      "url": "https://www.example.com/",
-      "filename": "000_www_example_com_.html",
-      "timestamp": "2025-09-09T10:47:06.499942"
-    }
-  ],
-  "total_snapshots": 1,
-  "created_at": "2025-09-09T10:47:07.656039"
-}
-```
 
-### operations.json 文件
+### record_x/operations.json 文件
 作用: 记录所有自动化操作的详细信息
 
 **文件结构**
@@ -656,7 +591,6 @@ URL: https://www.example.com/
         "tagName": "INPUT",
         "id": "kw",
         "className": "s_ipt",
-        "textContent": "",
         "innerHTML": "",
         "outerHTML": "<input id=\"kw\" name=\"wd\" class=\"s_ipt\" value=\"\" maxlength=\"255\" autocomplete=\"off\" placeholder=\"许凯虞书欣陷多重舆论风波\" style=\"\">"
        }
@@ -665,17 +599,7 @@ URL: https://www.example.com/
 ]
 ```
 
-**字段说明**
-- step_id: 操作步骤编号（从1开始）
-- timestamp: 操作执行的精确时间戳
-- action: 操作类型（navigation、click、input、select等）
-- selector: CSS选择器或特殊标识符
-- value: 操作值（如输入的文本、导航的URL等）
-- text_content: 元素的文本内容
-- screenshot: 对应截图文件的相对路径
-- dom_context: DOM上下文信息，包含页面和元素状态等
-
-### metadata.json 文件
+### recording_x/metadata.json 文件
 作用: 保存会话的基本信息和配置
 
 **文件结构**
@@ -701,39 +625,49 @@ URL: https://www.example.com/
       "tag_name": "div",
       "id": "content_left",
       "class_name": "element-hover-highlight",
-      "text_preview": "你好 - 百度百科 快捷键说明 空格: 播放 / 暂停Esc: 退出全屏 ↑: 音量提高10% ↓: 音量降低10% →: 单次快进5秒 ←: 单次快退5秒按住此处可拖拽 不再出现 可在播放器设置中重新打开小窗播放\n            \n            \n                \n                \n                \n              ",
+      "text_preview": "xxx",
       "selection_timestamp": 1757313539909
     },
     "selection_context": {
       "selected_at_step": 2,
-      "page_url": "https://www.baidu.com/s?ie=utf-8&f=8&rsv_bp=1&rsv_idx=1&tn=baidu&wd=%E4%BD%A0%E5%A5%BD&fenlei=256&rsv_pq=0xf326035c0346d817&rsv_t=746dj9hfuH3QZckY9%2Fy0Qawyjh4ByKw7ZCuiDzgctiIRjFzwszfoPWe7WaIJ&rqlang=en&rsv_dl=tb&rsv_enter=0&rsv_sug3=7&rsv_sug1=1&rsv_sug7=100&rsv_btype=i&prefixsug=%25E4%25BD%25A0%25E5%25A5%25BD&rsp=7&inputT=3213&rsv_sug4=5597"
+      "page_url": "xxx"
     }
   },
   "statistics": {
     "total_operations": 4,
     "total_screenshots": 4,
     "session_duration_seconds": 12.5,
-    "pages_visited": ["https://www.baidu.com/"]
+    "pages_visited": ["xxx"]
   }
 }
 ```
-### auth_state.json 文件
+
+### recording_x/auth_state.json 文件
 作用: 保存浏览器的认证状态，包括cookies、localStorage等
 
-</录制信息目录结构概览>
-
+</多次录制信息目录结构概览>
+'''+f'''
 <用户的要求>
-### 用户对任务的描述
-$任务描述
+### 用户对任务的总体描述
+{task_description}
+
+### 各次录制的说明
+{scenarios_info}
 
 ### 用户对期望内容的描述
-$返回内容描述
+{output_format_requirements}
+
+注意：用户的期望内容描述也可以在task_metadata.json文件的final_description字段中找到更详细的信息。
 </用户的要求>
 
 <你的任务>
-你需要首先理解用户当前的操作逻辑，然后根据用户期望返回的内容和描述写一个函数，他会把用户期望可变的内容作为函数参数传入（例如搜索的内容，设置搜索的范围等）。然后在函数中实现用户的操作逻辑。你需要基于我封装后的playwright执行，因为我加了很多record的功能，这样你在执行后，可以拿到对应的截图等，然后根据截图可以看到是哪里没执行好。检查是否执行好的时候，可以结合你运行函数后得到的结果，和用户当时录制时候的selected_element_highlight.png对应来分析，同时结合用户对期望内容的描述。如果出现问题你需要结合中间截图反复迭代函数直至任务完全成功。你的执行是没有selected_element_highlight.png文件的，所以你需要对比你的**函数输出结果**与用户当时录制的截图，对于中间过程的debug，你可以借助保存的html文件和函数trace的log以及当时用户执行时候的截图与你现在的截图进行对比。如果是点击某个按钮对应会触发跳转的话，截图的点击真实场景可能无法被捕捉到。
+- 你需要首先理解用户当前的操作逻辑，然后根据用户期望返回的内容和描述写一个函数，函数会把用户期望可变的内容作为函数参数传入（例如搜索的内容，设置搜索的范围等）。然后在函数中实现用户的操作逻辑。
+- 你需要基于我封装后的playwright执行，因为我加了很多record的功能，这样你在执行后，可以拿到输入/点击对应的截图等，然后根据截图可以看到是哪里没执行好。检查最终是否执行成功的时候，可以结合你运行函数后得到的结果，和用户当时录制时候的selected_element_highlight.png对应来分析，同时结合用户对期望内容的描述。如果出现问题你需要结合中间截图反复迭代函数直至任务完全成功。你的执行是没有selected_element_highlight.png文件的，所以你需要对比你的**函数输出结果**与用户当时录制的截图。你一定要确保你真正运行成功了每一次用户的录制的结果，而不是觉得可以工作就认为完成。
+- 为了方便你理解，用户会点击一些可能需要注意的条件（这些并非真实需要的点击事件，但是用户为了方便你理解用户提出的需求，会点击，这些一般是纯文本内容，用来提示你可能需要关注这些地方）。
+- 当结果不符合预期的时候，你可以借助保存的html文件和函数trace的log以及当时用户执行时候的截图与你现在执行后生成的截图进行对比。如果是点击某个按钮对应会触发跳转的话，截图的点击真实场景可能无法被捕捉到。请注意部分录制中可能包含iframe，他会在operations.json中xpath中记录。如果没能完成任务，结果不符合预期的原因很可能是**click或者input等事件的元素没选择对**（比如class相同的有多个元素等），这种情况下你可以仔细查看一下你的任务的截图，是否有符合在你预期的地方进行输入，grep等操作在网页中搜索一下对应class等等元素个数等。
+- 对于用class定位可能有重复的元素，请最好使用xpath的路径来点击，不要使用class来点击。
+- 你需要使用如下的模板来创建函数(请注意下述的session_path是你要保存的session_path，而不是之前用户录制的session_path，保存的session_path是用来调试你的函数的，他会帮你记录点击事件等的截图，还有你触发了哪些事件，方便你调试)，同时你实现的代码需要确保用户所有的录制都能被成功的复现出来，注意等待的操作不止应该和时间有关系，还得和一些元素创建有关系。请确保你执行过最后创建的function.py能成功复现用户的所有操作，否则视任务为失败
 
-你需要使用如下的模板来创建函数(请注意下述的session_path是你要保存的session_path，而不是之前用户录制的session_path，保存的session_path是用来调试你的函数的，他会帮你记录点击事件等的截图，还有你触发了哪些事件，方便你调试)
 ```python
 from src.utils.playwright_provider import get_playwright_instance, finalize_recording
 
@@ -742,32 +676,66 @@ browser, context, page = await get_playwright_instance(
     session_path="$save_session_path",
     session_name="$save_session_name",
     headless=False,
-    viewport={"width": 1280, "height": 720}
+    viewport={{"width": 960, "height": 580}}
 )
 
-# 一些点击等事件操作 xxxxxx
+# 智能的多场景处理逻辑 xxxxxx
+# 根据不同场景录制分析生成的分支处理代码
 
 # 结束录制 - 注意这里需要传入session_name
 recording_info = await finalize_recording("$save_session_name")
 ```
 
-请在$save_session_path下创建一个`.result`的文件，你需要非常诚实的汇报你的结果，如果最后失败了，`.result`请写入"FAILED"，如果成功了，`.result`请写入"SUCCESS"。同时，如果成功了，请在$save_session_path下创建一个`function.py`的文件，你需要把仅把最后的的函数代码写入这个文件中。
+- 对于验证码的输入，你需要调用我提供的API接口，code字段就是返回的验证码，但是请注意验证码识别可能一次对不了，在你实现的代码中需要有多次识别的逻辑(至少5次），同时验证码图片你也可以考虑保存一份写到本地，看是否正确识别了验证码区域。
+验证码解析函数：
+```python
+import requests
+
+
+base64_img = "data:image/png;base64,xxxxxx"
+
+token = "cSzHWVMeNPpaQ2G9x2gXRjoKwl_DeT4mGkkRcBcqSmQ"
+url = "http://api.jfbym.com/api/YmServer/customApi"
+
+payload = {{
+    "image": base64_img,
+    "token": token,
+    "type": '10110',
+}}
+
+try:
+    resp = requests.post(url, json=payload, timeout=30).json()
+    code = resp['data']['data']
+except requests.RequestException as e:
+    code = "0000"
+```
+
+- 最后，请在$save_session_path下创建一个`.result`的文件，你需要非常诚实的汇报你的结果，如果最后失败了，`.result`请写入"FAILED"，如果成功了，`.result`请写入"SUCCESS"。不要轻易放弃，只要还有机会，如果请尽量多的尝试，不要急躁，不要有畏难情绪。同时，如果成功了，请在$save_session_path下创建一个`function.py`的文件，你需要把仅把最后的的函数代码写入这个文件中。在写代码过程中遇到问题可以去看看生成的截图等，辅助debug是不是元素定位有问题等。
 </你的任务>
 '''
+        return prompt
+    
+    async def _execute_ai_analysis(self, prompt: str, session_folder_path: str) -> str:
+        """执行AI分析"""
         session_name = session_folder_path.split('/')[-1]
         save_session_path = './test_session' + '/' + session_name
+        
+        # 替换提示词中的占位符
         prompt = prompt.replace('$session_path', session_folder_path)
-        prompt = prompt.replace('$任务描述', task_description)
-        prompt = prompt.replace('$返回内容描述', output_format_requirements)
         prompt = prompt.replace('$save_session_path', save_session_path)
         prompt = prompt.replace('$save_session_name', session_name)
-        # print(prompt)
         
+        print(prompt)
+        with open('prompt.txt', 'w', encoding='utf-8') as f:
+            f.write(prompt)
+        import time;time.sleep(35000)
         # 最多尝试3次
         max_attempts = 3
         for attempt in range(1, max_attempts + 1):
             console.print(f"🤖 第 {attempt} 次AI分析尝试...", style="blue")
-            
+            # 删除save_session_path及其子目录
+            if Path(save_session_path).exists():
+                shutil.rmtree(save_session_path)
             try:
                 # 执行AI分析
                 history = await self.launch_agent(prompt)
@@ -823,7 +791,6 @@ recording_info = await finalize_recording("$save_session_name")
 """
 AI分析失败，返回基本模板函数
 会话: {session_folder_path}
-任务描述: {task_description}
 """
 
 async def failed_analysis_function():
@@ -831,8 +798,7 @@ async def failed_analysis_function():
     return {{
         "success": False,
         "error": "AI分析失败，请检查录制数据并重试",
-        "session_path": "{session_folder_path}",
-        "task_description": "{task_description}"
+        "session_path": "{session_folder_path}"
     }}
 
 # 同步版本
