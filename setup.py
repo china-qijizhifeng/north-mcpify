@@ -4,15 +4,13 @@
 
 from setuptools import setup, find_packages
 
-with open("README.md", "r", encoding="utf-8") as fh:
-    long_description = fh.read()
 
 setup(
     name="web-automation-platform",
     version="0.1.0",
     author="Web Automation Team",
     description="智能自动化API生成平台 - 将网页操作转化为Python函数",
-    long_description=long_description,
+    long_description="智能自动化API生成平台 - 将网页操作转化为Python函数",
     long_description_content_type="text/markdown",
     packages=find_packages(),
     classifiers=[
