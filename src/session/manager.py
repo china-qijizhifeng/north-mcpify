@@ -9,7 +9,7 @@ import shutil
 from pathlib import Path
 from datetime import datetime
 from typing import Dict, List, Optional, Any
-
+import subprocess
 from rich.console import Console
 from src.execution.executor import FunctionExecutor
 from src.utils.playwright_provider import PlaywrightProvider
@@ -296,7 +296,20 @@ class SessionManager:
         """
         return self.playwright_provider    
 
+
     async def launch_agent(self, prompt: str) -> list[Message]:
+        return await self.launch_codex_agent(prompt)
+
+
+    async def launch_codex_agent(self, prompt: str) -> list[Message]:
+        # 执行命令 codex exec --dangerously-bypass-approvals-and-sandbox  $prompt
+        command = f"codex exec --dangerously-bypass-approvals-and-sandbox  {json.dumps(prompt, ensure_ascii=False)}"
+        result = subprocess.run(command, shell=True, capture_output=True, text=True)
+        print(result)
+        return result.stdout
+
+
+    async def launch_claude_agent(self, prompt: str) -> list[Message]:
         history = []
         async for message in query(
             prompt=prompt,
@@ -664,7 +677,7 @@ URL: https://www.example.com/
 - 你需要首先理解用户当前的操作逻辑，然后根据用户期望返回的内容和描述写一个函数，函数会把用户期望可变的内容作为函数参数传入（例如搜索的内容，设置搜索的范围等）。然后在函数中实现用户的操作逻辑。
 - 你需要基于我封装后的playwright执行，因为我加了很多record的功能，这样你在执行后，可以拿到输入/点击对应的截图等，然后根据截图可以看到是哪里没执行好。检查最终是否执行成功的时候，可以结合你运行函数后得到的结果，和用户当时录制时候的selected_element_highlight.png对应来分析，同时结合用户对期望内容的描述。如果出现问题你需要结合中间截图反复迭代函数直至任务完全成功。你的执行是没有selected_element_highlight.png文件的，所以你需要对比你的**函数输出结果**与用户当时录制的截图。你一定要确保你真正运行成功了每一次用户的录制的结果，而不是觉得可以工作就认为完成。
 - 为了方便你理解，用户会点击一些可能需要注意的条件（这些并非真实需要的点击事件，但是用户为了方便你理解用户提出的需求，会点击，这些一般是纯文本内容，用来提示你可能需要关注这些地方）。
-- 当结果不符合预期的时候，你可以借助保存的html文件和函数trace的log以及当时用户执行时候的截图与你现在执行后生成的截图进行对比。如果是点击某个按钮对应会触发跳转的话，截图的点击真实场景可能无法被捕捉到。请注意部分录制中可能包含iframe，他会在operations.json中xpath中记录。如果没能完成任务，结果不符合预期的原因很可能是**click或者input等事件的元素没选择对**（比如class相同的有多个元素等），这种情况下你可以仔细查看一下你的任务的截图，是否有符合在你预期的地方进行输入，grep等操作在网页中搜索一下对应class等等元素个数等。
+- 当结果不符合预期的时候，你可以借助保存的html文件和函数trace的log以及当时用户执行时候的截图与你现在执行后生成的截图进行对比。如果是点击某个按钮对应会触发跳转的话，截图的点击真实场景可能无法被捕捉到。请注意部分录制中可能包含iframe，他会在operations.json中xpath中记录。如果没能完成任务，结果不符合预期的原因很可能是**click或者input等事件的元素没选择对**（比如class相同的有多个元素等），这种情况下你可以仔细查看一下你的任务的截图，是否有符合在你预期的地方进行输入，grep等操作在网页中搜索一下对应class等等元素个数等，还有查查是否等待方式/时间是否不够等。
 - 对于用class定位可能有重复的元素，请最好使用xpath的路径来点击，不要使用class来点击。
 - 你需要使用如下的模板来创建函数(请注意下述的session_path是你要保存的session_path，而不是之前用户录制的session_path，保存的session_path是用来调试你的函数的，他会帮你记录点击事件等的截图，还有你触发了哪些事件，方便你调试)，同时你实现的代码需要确保用户所有的录制都能被成功的复现出来，注意等待的操作不止应该和时间有关系，还得和一些元素创建有关系。请确保你执行过最后创建的function.py能成功复现用户的所有操作，否则视任务为失败
 
@@ -710,7 +723,7 @@ except requests.RequestException as e:
     code = "0000"
 ```
 
-- 最后，请在$save_session_path下创建一个`.result`的文件，你需要非常诚实的汇报你的结果，如果最后失败了，`.result`请写入"FAILED"，如果成功了，`.result`请写入"SUCCESS"。不要轻易放弃，只要还有机会，如果请尽量多的尝试，不要急躁，不要有畏难情绪。同时，如果成功了，请在$save_session_path下创建一个`function.py`的文件，你需要把仅把最后的的函数代码写入这个文件中。在写代码过程中遇到问题可以去看看生成的截图等，辅助debug是不是元素定位有问题等。
+- 最后，请在$save_session_path下创建一个`.result`的文件，你需要非常诚实的汇报你的结果，如果最后失败了，`.result`请写入"FAILED"，如果成功了，`.result`请写入"SUCCESS"。不要轻易放弃，只要还有机会，如果请尽量多的尝试，不要急躁，不要有畏难情绪。同时，如果成功了，请在$save_session_path下创建一个`function.py`的文件，你需要把仅把最后的的一个函数代码写入这个文件中。在写代码过程中遇到问题可以去看看生成的截图等，辅助debug是不是元素定位有问题等。请一直执行，无需寻求用户的同意，直到完成整个任务，创建完成.result和function.py文件。function.py仅能包含一个函数，不能包含其他代码，调试的代码请写入其他代码文件中，在调试完成后再将最终的一个函数（包含函数的docstring）写入function.py文件中。
 </你的任务>
 '''
         return prompt
@@ -728,7 +741,7 @@ except requests.RequestException as e:
         print(prompt)
         with open('prompt.txt', 'w', encoding='utf-8') as f:
             f.write(prompt)
-        import time;time.sleep(35000)
+        # import time;time.sleep(35000)
         # 最多尝试3次
         max_attempts = 3
         for attempt in range(1, max_attempts + 1):
