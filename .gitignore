@@ -1,0 +1,6 @@
+# Local generated and session artifacts (do not commit)
+/generated_functions/
+/test_results/
+/tmp/
+
+
